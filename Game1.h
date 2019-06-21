@@ -15,6 +15,9 @@ enum KeyPressSurfaces
 //Starts up SDL and creates window
 bool init();
 
+//Starts up SDL and creates window that renders textures
+bool initRenderer();
+
 //Loads media
 bool loadMedia();
 
