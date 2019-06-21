@@ -59,14 +59,29 @@ bool init()
 
 SDL_Surface* loadSurface( char *path )
 {
+    //The final optimized image
+	SDL_Surface* optimizedSurface = NULL;
+
     //Load image at specified path
     SDL_Surface* loadedSurface = SDL_LoadBMP( path );
     if( loadedSurface == NULL )
     {
         printf( "Unable to load image %s! SDL Error: %s\n", path, SDL_GetError() );
     }
+    else
+    {
+       //Convert surface to screen format
+		optimizedSurface = SDL_ConvertSurface( loadedSurface, gScreenSurface->format, 0 );
+		if( optimizedSurface == NULL )
+		{
+			printf( "Unable to optimize image %s! SDL Error: %s\n", path, SDL_GetError() );
+		}
 
-    return loadedSurface;
+		//Get rid of old loaded surface
+		SDL_FreeSurface( loadedSurface );
+	}
+
+	return optimizedSurface;
 }
 
 bool loadMedia()
@@ -203,8 +218,13 @@ int main( int argc, char* args[] )
                         quit = true;
                     }
 
-                //Apply the current image
-                SDL_BlitSurface( gCurrentSurface, NULL, gScreenSurface, NULL );
+                //Apply the image stretched
+				SDL_Rect stretchRect;
+				stretchRect.x = 0;
+				stretchRect.y = 0;
+				stretchRect.w = SCREEN_WIDTH / 2.0;
+				stretchRect.h = SCREEN_HEIGHT / 2.0;
+				SDL_BlitScaled( gCurrentSurface, NULL, gScreenSurface, &stretchRect );
 
                 //Update the surface
                 SDL_UpdateWindowSurface( gWindow );
