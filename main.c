@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <SDL.h>
+#include <SDL_image.h>
 #include <stdbool.h>
 #include "Game1.h"
 
@@ -50,8 +51,18 @@ bool init()
         }
         else
         {
+            //Initialize PNG loading
+            int imgFlags = IMG_INIT_PNG;
+            if( !( IMG_Init( imgFlags ) & imgFlags ) )
+            {
+                printf( "SDL_image could not initialize! SDL_image Error: %s\n", IMG_GetError() );
+                success = false;
+            }
+            else
+            {
             //Get window surface
             gScreenSurface = SDL_GetWindowSurface( gWindow );
+            }
         }
     }
     return success;
@@ -63,10 +74,10 @@ SDL_Surface* loadSurface( char *path )
 	SDL_Surface* optimizedSurface = NULL;
 
     //Load image at specified path
-    SDL_Surface* loadedSurface = SDL_LoadBMP( path );
+    SDL_Surface* loadedSurface = IMG_Load( path );
     if( loadedSurface == NULL )
     {
-        printf( "Unable to load image %s! SDL Error: %s\n", path, SDL_GetError() );
+        printf( "Unable to load image %s! SDL Error: %s\n", path, IMG_GetError() );
     }
     else
     {
