@@ -156,6 +156,33 @@ SDL_Surface* loadSurface( char *path )
 	return optimizedSurface;
 }
 
+SDL_Texture* loadTexture( char *path )
+{
+    //The final texture
+    SDL_Texture* newTexture = NULL;
+
+    //Load image at specified path
+    SDL_Surface* loadedSurface = IMG_Load( path );
+    if( loadedSurface == NULL )
+    {
+        printf( "Unable to load image %s! SDL_image Error: %s\n", path, IMG_GetError() );
+    }
+    else
+    {
+        //Create texture from surface pixels
+        newTexture = SDL_CreateTextureFromSurface( gRenderer, loadedSurface );
+        if( newTexture == NULL )
+        {
+            printf( "Unable to create texture from %s! SDL Error: %s\n", path, SDL_GetError() );
+        }
+
+        //Get rid of old loaded surface
+        SDL_FreeSurface( loadedSurface );
+    }
+
+    return newTexture;
+}
+
 bool loadMedia()
 {
     //Loading success flag
@@ -204,6 +231,22 @@ bool loadMedia()
     return success;
 }
 
+bool loadMediaTexture()
+{
+    //Loading success flag
+    bool success = true;
+
+    //Load PNG texture
+    gTexture = loadTexture( "07_texture_loading_and_rendering/texture.png" );
+    if( gTexture == NULL )
+    {
+        printf( "Failed to load texture image!\n" );
+        success = false;
+    }
+
+    return success;
+}
+
 void close()
 {
     //Deallocate surface
@@ -215,6 +258,23 @@ void close()
     gWindow = NULL;
 
     //Quit SDL subsystems
+    SDL_Quit();
+}
+
+void closeTexture()
+{
+    //Free loaded image
+    SDL_DestroyTexture( gTexture );
+    gTexture = NULL;
+
+    //Destroy window
+    SDL_DestroyRenderer( gRenderer );
+    SDL_DestroyWindow( gWindow );
+    gWindow = NULL;
+    gRenderer = NULL;
+
+    //Quit SDL subsystems
+    IMG_Quit();
     SDL_Quit();
 }
 
@@ -230,14 +290,14 @@ int main( int argc, char* args[] )
     gCurrentSurface = gKeyPressSurfaces[ KEY_PRESS_SURFACE_DEFAULT ];
 
     //Start up SDL and create window
-    if( !init() )
+    if( !initRenderer() )
     {
         printf( "Failed to initialize!\n" );
     }
     else
     {
         //Load media
-        if( !loadMedia() )
+        if( !loadMediaTexture() )
         {
             printf( "Failed to load media!\n" );
         }
@@ -256,10 +316,13 @@ int main( int argc, char* args[] )
                 //Handle events on queue
                 while( SDL_PollEvent( &e ) != 0 )
                 {
+
+                     /*
+
                      //User presses a key
                     if( e.type == SDL_KEYDOWN )
                     {
-                        //Select surfaces based on key press
+                       //Select surfaces based on key press
                         switch( e.key.keysym.sym )
                         {
                             case SDLK_UP:
@@ -282,14 +345,17 @@ int main( int argc, char* args[] )
                             gCurrentSurface = gKeyPressSurfaces[ KEY_PRESS_SURFACE_DEFAULT ];
                             break;
                         }
-                    }
 
+
+                    }
+                        */
                     //User requests quit
-                    else if( e.type == SDL_QUIT )
+                    if( e.type == SDL_QUIT )
                     {
                         quit = true;
                     }
 
+                /*
                 //Apply the image stretched
 				SDL_Rect stretchRect;
 				stretchRect.x = 0;
@@ -300,6 +366,17 @@ int main( int argc, char* args[] )
 
                 //Update the surface
                 SDL_UpdateWindowSurface( gWindow );
+                */
+
+                //Clear screen
+                SDL_RenderClear( gRenderer );
+
+                //Render texture to screen
+                SDL_RenderCopy( gRenderer, gTexture, NULL, NULL );
+
+                //Update screen
+                SDL_RenderPresent( gRenderer );
+
 
                 }
             }
