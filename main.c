@@ -6,7 +6,7 @@
 #include "Game1.h"
 
 //Loads individual image as texture
-SDL_Texture* loadTexture( path );
+SDL_Texture* loadTexture( char *path );
 
 //The window we'll be rendering to
 SDL_Window* gWindow = NULL;
@@ -37,6 +37,8 @@ char imagePathUp[24] = "Up.bmp";
 char imagePathDown[24] = "Down.bmp";
 char imagePathLeft[24] = "Left.bmp";
 char imagePathRight[24] = "Right.bmp";
+
+bool loadMediaGeometry();
 
 bool init()
 {
@@ -247,6 +249,15 @@ bool loadMediaTexture()
     return success;
 }
 
+bool loadMediaGeometry()
+{
+    //Loading success flag
+    bool success = true;
+
+    //Nothing to load
+    return success;
+}
+
 void close()
 {
     //Deallocate surface
@@ -297,7 +308,7 @@ int main( int argc, char* args[] )
     else
     {
         //Load media
-        if( !loadMediaTexture() )
+        if( !loadMediaGeometry() )
         {
             printf( "Failed to load media!\n" );
         }
@@ -368,6 +379,36 @@ int main( int argc, char* args[] )
                 SDL_UpdateWindowSurface( gWindow );
                 */
 
+				//Clear screen
+				SDL_SetRenderDrawColor( gRenderer, 0xFF, 0xFF, 0xFF, 0xFF );
+				SDL_RenderClear( gRenderer );
+
+				//Render red filled quad
+				SDL_Rect fillRect = { SCREEN_WIDTH / 4, SCREEN_HEIGHT / 4, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 };
+				SDL_SetRenderDrawColor( gRenderer, 0xFF, 0x00, 0x00, 0xFF );
+				SDL_RenderFillRect( gRenderer, &fillRect );
+
+				//Render green outlined quad
+				SDL_Rect outlineRect = { SCREEN_WIDTH / 6, SCREEN_HEIGHT / 6, SCREEN_WIDTH * 2 / 3, SCREEN_HEIGHT * 2 / 3 };
+				SDL_SetRenderDrawColor( gRenderer, 0x00, 0xFF, 0x00, 0xFF );
+				SDL_RenderDrawRect( gRenderer, &outlineRect );
+
+				//Draw blue horizontal line
+				SDL_SetRenderDrawColor( gRenderer, 0x00, 0x00, 0xFF, 0xFF );
+				SDL_RenderDrawLine( gRenderer, 0, SCREEN_HEIGHT / 2, SCREEN_WIDTH, SCREEN_HEIGHT / 2 );
+
+				//Draw vertical line of yellow dots
+				SDL_SetRenderDrawColor( gRenderer, 0xFF, 0xFF, 0x00, 0xFF );
+				for( int i = 0; i < SCREEN_HEIGHT; i += 4 )
+				{
+					SDL_RenderDrawPoint( gRenderer, SCREEN_WIDTH / 2, i );
+				}
+
+				//Update screen
+				SDL_RenderPresent( gRenderer );
+            }
+
+                /*
                 //Clear screen
                 SDL_RenderClear( gRenderer );
 
@@ -376,18 +417,22 @@ int main( int argc, char* args[] )
 
                 //Update screen
                 SDL_RenderPresent( gRenderer );
+                */
 
 
                 }
             }
         }
+
+        //Free resources and close SDL
+        close();
+        return 0;
     }
 
-    //Free resources and close SDL
-    close();
 
-    return 0;
-}
+
+
+
 
 
 
