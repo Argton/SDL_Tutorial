@@ -71,6 +71,12 @@ int globalHeight;
 SDL_Rect gSpriteClips[ 4 ];
 struct textureStruct gSpriteSheetTexture;
 
+//Set blending
+void setBlendMode( SDL_BlendMode blending );
+
+//Set alpha modulation
+void setAlpha( Uint8 alpha );
+
 bool init()
 {
     //Initialization flag
@@ -345,30 +351,6 @@ bool LTexture(struct textureStruct *structinput)
             //Get image dimensions
             structinput->mWidth = loadedSurface->w;
             structinput->mHeight = loadedSurface->h;
-
-            //Set top left sprite
-            gSpriteClips[ 0 ].x =   0;
-            gSpriteClips[ 0 ].y =   0;
-            gSpriteClips[ 0 ].w = 100;
-            gSpriteClips[ 0 ].h = 100;
-
-            //Set top right sprite
-            gSpriteClips[ 1 ].x = 100;
-            gSpriteClips[ 1 ].y =   0;
-            gSpriteClips[ 1 ].w = 100;
-            gSpriteClips[ 1 ].h = 100;
-
-            //Set bottom left sprite
-            gSpriteClips[ 2 ].x =   0;
-            gSpriteClips[ 2 ].y = 100;
-            gSpriteClips[ 2 ].w = 100;
-            gSpriteClips[ 2 ].h = 100;
-
-            //Set bottom right sprite
-            gSpriteClips[ 3 ].x = 100;
-            gSpriteClips[ 3 ].y = 100;
-            gSpriteClips[ 3 ].w = 100;
-            gSpriteClips[ 3 ].h = 100;
         }
 
         //Get rid of old loaded surface
@@ -410,6 +392,9 @@ int main( int argc, char* args[] )
     //Event handler
     SDL_Event e;
 
+    //Modulation component
+    Uint8 a = 255;
+
     //Start up SDL and create window
     if( !initRenderer() )
     {
@@ -417,25 +402,25 @@ int main( int argc, char* args[] )
     }
     else
     {
-        struct textureStruct texture1;
-        texture1.imagePath = "10_color_keying/foo.png";
-        texture1.xPos = 240;
-        texture1.yPos = 190;
-
-        struct textureStruct texture2;
-        texture2.imagePath = "10_color_keying/background.png";
-        texture2.xPos = 0;
-        texture2.yPos = 0;
         struct textureStruct gModulatedTexture;
-        gModulatedTexture.imagePath = "12_color_modulation/colors.png";
+        gModulatedTexture.imagePath = "13_alpha_blending/fadeout.png";
         gModulatedTexture.xPos = 0;
         gModulatedTexture.yPos = 0;
+
+        struct textureStruct gBackgroundTexture;
+        gBackgroundTexture.imagePath = "13_alpha_blending/fadein.png";
+        gBackgroundTexture.xPos = 0;
+        gBackgroundTexture.yPos = 0;
 
         if( !LTexture(&gModulatedTexture) )
         {
             printf( "Failed to load media! \n" );
         }
 
+        if( !LTexture(&gBackgroundTexture) )
+        {
+            printf( "Failed to load media! \n" );
+        }
 
         //While application is running
         while( !quit )
@@ -449,60 +434,52 @@ int main( int argc, char* args[] )
                     quit = true;
                 }
                 //On keypress change rgb values
-                else if( e.type == SDL_KEYDOWN )
-                {
-                    switch( e.key.keysym.sym )
+
+                //Handle key presses
+                    else if( e.type == SDL_KEYDOWN )
                     {
-                        //Increase red
-                        case SDLK_q:
-                        r += 32;
-                        break;
-
-                        //Increase green
-                        case SDLK_w:
-                        g += 32;
-                        break;
-
-                        //Increase blue
-                        case SDLK_e:
-                        b += 32;
-                        break;
-
-                        //Decrease red
-                        case SDLK_a:
-                        r -= 32;
-                        break;
-
-                        //Decrease green
-                        case SDLK_s:
-                        g -= 32;
-                        break;
-
-                        //Decrease blue
-                        case SDLK_d:
-                        b -= 32;
-                        break;
+                        //Increase alpha on w
+                        if( e.key.keysym.sym == SDLK_w )
+                        {
+                            //Cap if over 255
+                            if( a + 32 > 255 )
+                            {
+                                a = 255;
+                            }
+                            //Increment otherwise
+                            else
+                            {
+                                a += 32;
+                            }
+                        }
+                        //Decrease alpha on s
+                        else if( e.key.keysym.sym == SDLK_s )
+                        {
+                            //Cap if below 0
+                            if( a - 32 < 0 )
+                            {
+                                a = 0;
+                            }
+                            //Decrement otherwise
+                            else
+                            {
+                                a -= 32;
+                            }
+                        }
                     }
                 }
-            }
+
                 //Clear screen
                 SDL_SetRenderDrawColor( gRenderer, 0xFF, 0xFF, 0xFF, 0xFF );
                 SDL_RenderClear( gRenderer );
 
-
-
-                SDL_SetTextureColorMod( gModulatedTexture.mTexture, r, g, b );
+                textureRender(&gBackgroundTexture, NULL);
                 textureRender(&gModulatedTexture, NULL);
 
-                /*
-                //Render background texture to screen
-
-                SDL_Rect renderQuad = { texture2.xPos , texture2.yPos , texture2.mWidth, texture2.mHeight };
-                SDL_RenderCopy( gRenderer, texture2.mTexture, NULL, &renderQuad );
-
-                SDL_Rect renderQuad2 = { texture1.xPos, texture1.yPos, texture1.mWidth, texture1.mHeight };
-                SDL_RenderCopy( gRenderer, texture1.mTexture, NULL, &renderQuad2 );
-                */
+                //Set blending function
+                SDL_SetTextureBlendMode( gModulatedTexture.mTexture, SDL_BLENDMODE_BLEND );
+                //Modulate texture alpha
+                SDL_SetTextureAlphaMod( gModulatedTexture.mTexture, a );
 
                 //Update screen
                 SDL_RenderPresent( gRenderer );
