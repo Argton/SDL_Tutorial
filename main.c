@@ -43,7 +43,17 @@ SDL_Texture* newTexture = NULL;
 
 bool loadMediaGeometry();
 
-bool LTexture(char *path);
+struct textureStruct
+{
+    char *imagePath;
+    int mWidth;
+    int mHeight;
+    int xPos;
+    int yPos;
+    SDL_Texture* mTexture;
+};
+
+bool LTexture(struct textureStruct *inputStruct);
 
 bool loadFromFile(char *path);
 void free();
@@ -304,17 +314,15 @@ void closeTexture()
     SDL_Quit();
 }
 
-
-
-bool LTexture(char *path)
+bool LTexture(struct textureStruct *structinput)
 {
 
     mTexture = NULL;
 
-    SDL_Surface* loadedSurface = IMG_Load( path );
+    SDL_Surface* loadedSurface = IMG_Load( structinput->imagePath );
     if( loadedSurface == NULL )
     {
-        printf( "Unable to load image %s! SDL_image Error: %s\n", path, IMG_GetError() );
+        printf( "Unable to load image %s! SDL_image Error: %s\n", structinput->imagePath, IMG_GetError() );
     }
     else
     {
@@ -324,13 +332,13 @@ bool LTexture(char *path)
         newTexture = SDL_CreateTextureFromSurface( gRenderer, loadedSurface );
         if( newTexture == NULL )
         {
-            printf( "Unable to create texture from %s! SDL Error: %s\n", path, SDL_GetError() );
+            printf( "Unable to create texture from %s! SDL Error: %s\n", structinput->imagePath, SDL_GetError() );
         }
         else
         {
             //Get image dimensions
-            globalWidth = loadedSurface->w;
-            globalHeight = loadedSurface->h;
+            structinput->mWidth = loadedSurface->w;
+            structinput->mHeight = loadedSurface->h;
         }
 
         //Get rid of old loaded surface
@@ -338,20 +346,9 @@ bool LTexture(char *path)
     }
 
     //Return success
-    mTexture = newTexture;
+    structinput->mTexture = newTexture;
     return mTexture != NULL;
 }
-
-struct textureStruct
-{
-    char *imagePath;
-    int mWidth;
-    int mHeight;
-    int xPos;
-    int yPos;
-    SDL_Texture* mTexture;
-};
-
 
 int main( int argc, char* args[] )
 {
@@ -381,23 +378,15 @@ int main( int argc, char* args[] )
         texture2.xPos = 0;
         texture2.yPos = 0;
 
-        if( !LTexture(texture1.imagePath) )
+        if( !LTexture(&texture1) )
         {
             printf( "Failed to load media!\n" );
         }
 
-        texture1.mWidth = globalWidth;
-        texture1.mHeight = globalHeight;
-        texture1.mTexture = newTexture;
-
-        if( !LTexture(texture2.imagePath) )
+        if( !LTexture(&texture2) )
         {
             printf( "Failed to load media!\n" );
         }
-
-        texture2.mWidth = globalWidth;
-        texture2.mHeight = globalHeight;
-        texture2.mTexture = newTexture;
 
         //While application is running
         while( !quit )
@@ -417,10 +406,10 @@ int main( int argc, char* args[] )
 
                 //Render background texture to screen
 
-                SDL_Rect renderQuad = { 0, 0, texture2.mWidth, texture2.mHeight };
+                SDL_Rect renderQuad = { texture2.xPos , texture2.yPos , texture2.mWidth, texture2.mHeight };
                 SDL_RenderCopy( gRenderer, texture2.mTexture, NULL, &renderQuad );
 
-                SDL_Rect renderQuad2 = { 240, 190, texture1.mWidth, texture1.mHeight };
+                SDL_Rect renderQuad2 = { texture1.xPos, texture1.yPos, texture1.mWidth, texture1.mHeight };
                 SDL_RenderCopy( gRenderer, texture1.mTexture, NULL, &renderQuad2 );
 
                 //Update screen
