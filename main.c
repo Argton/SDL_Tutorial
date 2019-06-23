@@ -53,6 +53,8 @@ struct textureStruct
     SDL_Texture* mTexture;
 };
 
+void textureRender(struct textureStruct *structinput, SDL_Rect* clip);
+
 bool LTexture(struct textureStruct *inputStruct);
 
 bool loadFromFile(char *path);
@@ -64,6 +66,10 @@ SDL_Texture* mTexture;
 //Image dimensions
 int globalWidth;
 int globalHeight;
+
+//Scene sprites
+SDL_Rect gSpriteClips[ 4 ];
+struct textureStruct gSpriteSheetTexture;
 
 bool init()
 {
@@ -339,6 +345,30 @@ bool LTexture(struct textureStruct *structinput)
             //Get image dimensions
             structinput->mWidth = loadedSurface->w;
             structinput->mHeight = loadedSurface->h;
+
+            //Set top left sprite
+            gSpriteClips[ 0 ].x =   0;
+            gSpriteClips[ 0 ].y =   0;
+            gSpriteClips[ 0 ].w = 100;
+            gSpriteClips[ 0 ].h = 100;
+
+            //Set top right sprite
+            gSpriteClips[ 1 ].x = 100;
+            gSpriteClips[ 1 ].y =   0;
+            gSpriteClips[ 1 ].w = 100;
+            gSpriteClips[ 1 ].h = 100;
+
+            //Set bottom left sprite
+            gSpriteClips[ 2 ].x =   0;
+            gSpriteClips[ 2 ].y = 100;
+            gSpriteClips[ 2 ].w = 100;
+            gSpriteClips[ 2 ].h = 100;
+
+            //Set bottom right sprite
+            gSpriteClips[ 3 ].x = 100;
+            gSpriteClips[ 3 ].y = 100;
+            gSpriteClips[ 3 ].w = 100;
+            gSpriteClips[ 3 ].h = 100;
         }
 
         //Get rid of old loaded surface
@@ -347,8 +377,26 @@ bool LTexture(struct textureStruct *structinput)
 
     //Return success
     structinput->mTexture = newTexture;
-    return mTexture != NULL;
+    return newTexture != NULL;
 }
+
+void textureRender(struct textureStruct *structinput, SDL_Rect* clip)
+{
+    //Set rendering space and render to screen
+    SDL_Rect renderQuad = { structinput->xPos, structinput->yPos, structinput->mWidth, structinput->mHeight };
+
+    //Set clip rendering dimensions
+    if( clip != NULL )
+    {
+        renderQuad.w = clip->w;
+        renderQuad.h = clip->h;
+    }
+
+    //Render to screen
+    SDL_RenderCopy( gRenderer, structinput->mTexture, clip, &renderQuad );
+}
+
+
 
 int main( int argc, char* args[] )
 {
@@ -357,9 +405,6 @@ int main( int argc, char* args[] )
 
     //Event handler
     SDL_Event e;
-
-    //Set default current surface
-    gCurrentSurface = gKeyPressSurfaces[ KEY_PRESS_SURFACE_DEFAULT ];
 
     //Start up SDL and create window
     if( !initRenderer() )
@@ -380,12 +425,12 @@ int main( int argc, char* args[] )
 
         if( !LTexture(&texture1) )
         {
-            printf( "Failed to load media!\n" );
+            printf( "Failed to load media! \n" );
         }
 
         if( !LTexture(&texture2) )
         {
-            printf( "Failed to load media!\n" );
+            printf( "Failed to load media! \n" );
         }
 
         //While application is running
@@ -404,6 +449,30 @@ int main( int argc, char* args[] )
                 SDL_SetRenderDrawColor( gRenderer, 0xFF, 0xFF, 0xFF, 0xFF );
                 SDL_RenderClear( gRenderer );
 
+                gSpriteSheetTexture.imagePath = "11_clip_rendering_and_sprite_sheets/dots.png";
+                gSpriteSheetTexture.xPos = 0;
+                gSpriteSheetTexture.yPos = 0;
+
+               if( !LTexture(&gSpriteSheetTexture) )
+               {
+                    printf( "Failed to load media! \n" );
+               }
+
+               textureRender(&gSpriteSheetTexture, &gSpriteClips[ 0 ]);
+
+               gSpriteSheetTexture.xPos = SCREEN_WIDTH - gSpriteClips[ 1 ].w;
+               gSpriteSheetTexture.yPos = 0;
+               textureRender(&gSpriteSheetTexture, &gSpriteClips[ 1 ]);
+
+               gSpriteSheetTexture.xPos = 0;
+               gSpriteSheetTexture.yPos = SCREEN_HEIGHT - gSpriteClips[ 2 ].h;
+               textureRender(&gSpriteSheetTexture, &gSpriteClips[ 2 ]);
+
+               gSpriteSheetTexture.xPos = SCREEN_WIDTH - gSpriteClips[ 3 ].w;
+               gSpriteSheetTexture.yPos = SCREEN_HEIGHT - gSpriteClips[ 3 ].h;
+               textureRender(&gSpriteSheetTexture, &gSpriteClips[ 3 ]);
+
+                /*
                 //Render background texture to screen
 
                 SDL_Rect renderQuad = { texture2.xPos , texture2.yPos , texture2.mWidth, texture2.mHeight };
@@ -411,6 +480,7 @@ int main( int argc, char* args[] )
 
                 SDL_Rect renderQuad2 = { texture1.xPos, texture1.yPos, texture1.mWidth, texture1.mHeight };
                 SDL_RenderCopy( gRenderer, texture1.mTexture, NULL, &renderQuad2 );
+                */
 
                 //Update screen
                 SDL_RenderPresent( gRenderer );
@@ -419,7 +489,7 @@ int main( int argc, char* args[] )
    }
 
         //Free resources and close SDL
-        close();
+        closeTexture();
         return 0;
 }
 
