@@ -403,6 +403,10 @@ int main( int argc, char* args[] )
     //Main loop flag
     bool quit = false;
 
+    Uint8 r = 255;
+    Uint8 g = 255;
+    Uint8 b = 255;
+
     //Event handler
     SDL_Event e;
 
@@ -422,16 +426,16 @@ int main( int argc, char* args[] )
         texture2.imagePath = "10_color_keying/background.png";
         texture2.xPos = 0;
         texture2.yPos = 0;
+        struct textureStruct gModulatedTexture;
+        gModulatedTexture.imagePath = "12_color_modulation/colors.png";
+        gModulatedTexture.xPos = 0;
+        gModulatedTexture.yPos = 0;
 
-        if( !LTexture(&texture1) )
+        if( !LTexture(&gModulatedTexture) )
         {
             printf( "Failed to load media! \n" );
         }
 
-        if( !LTexture(&texture2) )
-        {
-            printf( "Failed to load media! \n" );
-        }
 
         //While application is running
         while( !quit )
@@ -444,33 +448,51 @@ int main( int argc, char* args[] )
                 {
                     quit = true;
                 }
+                //On keypress change rgb values
+                else if( e.type == SDL_KEYDOWN )
+                {
+                    switch( e.key.keysym.sym )
+                    {
+                        //Increase red
+                        case SDLK_q:
+                        r += 32;
+                        break;
 
+                        //Increase green
+                        case SDLK_w:
+                        g += 32;
+                        break;
+
+                        //Increase blue
+                        case SDLK_e:
+                        b += 32;
+                        break;
+
+                        //Decrease red
+                        case SDLK_a:
+                        r -= 32;
+                        break;
+
+                        //Decrease green
+                        case SDLK_s:
+                        g -= 32;
+                        break;
+
+                        //Decrease blue
+                        case SDLK_d:
+                        b -= 32;
+                        break;
+                    }
+                }
+            }
                 //Clear screen
                 SDL_SetRenderDrawColor( gRenderer, 0xFF, 0xFF, 0xFF, 0xFF );
                 SDL_RenderClear( gRenderer );
 
-                gSpriteSheetTexture.imagePath = "11_clip_rendering_and_sprite_sheets/dots.png";
-                gSpriteSheetTexture.xPos = 0;
-                gSpriteSheetTexture.yPos = 0;
 
-               if( !LTexture(&gSpriteSheetTexture) )
-               {
-                    printf( "Failed to load media! \n" );
-               }
 
-               textureRender(&gSpriteSheetTexture, &gSpriteClips[ 0 ]);
-
-               gSpriteSheetTexture.xPos = SCREEN_WIDTH - gSpriteClips[ 1 ].w;
-               gSpriteSheetTexture.yPos = 0;
-               textureRender(&gSpriteSheetTexture, &gSpriteClips[ 1 ]);
-
-               gSpriteSheetTexture.xPos = 0;
-               gSpriteSheetTexture.yPos = SCREEN_HEIGHT - gSpriteClips[ 2 ].h;
-               textureRender(&gSpriteSheetTexture, &gSpriteClips[ 2 ]);
-
-               gSpriteSheetTexture.xPos = SCREEN_WIDTH - gSpriteClips[ 3 ].w;
-               gSpriteSheetTexture.yPos = SCREEN_HEIGHT - gSpriteClips[ 3 ].h;
-               textureRender(&gSpriteSheetTexture, &gSpriteClips[ 3 ]);
+                SDL_SetTextureColorMod( gModulatedTexture.mTexture, r, g, b );
+                textureRender(&gModulatedTexture, NULL);
 
                 /*
                 //Render background texture to screen
@@ -484,7 +506,7 @@ int main( int argc, char* args[] )
 
                 //Update screen
                 SDL_RenderPresent( gRenderer );
-          }
+
         }
    }
 
