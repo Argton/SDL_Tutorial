@@ -53,7 +53,7 @@ struct textureStruct
     SDL_Texture* mTexture;
 };
 
-void textureRender(struct textureStruct *structinput, SDL_Rect* clip);
+void textureRender(struct textureStruct *structinput, SDL_Rect* clip, double angle, SDL_Point* center, SDL_RendererFlip flip);
 
 bool LTexture(struct textureStruct *inputStruct);
 
@@ -418,7 +418,7 @@ bool LTexture(struct textureStruct *structinput)
     return newTexture != NULL;
 }
 
-void textureRender(struct textureStruct *structinput, SDL_Rect* clip)
+void textureRender(struct textureStruct *structinput, SDL_Rect* clip, double angle, SDL_Point* center, SDL_RendererFlip flip)
 {
     //Set rendering space and render to screen
     SDL_Rect renderQuad = { structinput->xPos, structinput->yPos, structinput->mWidth, structinput->mHeight };
@@ -431,7 +431,8 @@ void textureRender(struct textureStruct *structinput, SDL_Rect* clip)
     }
 
     //Render to screen
-    SDL_RenderCopy( gRenderer, structinput->mTexture, clip, &renderQuad );
+    //SDL_RenderCopy( gRenderer, structinput->mTexture, clip, &renderQuad );
+    SDL_RenderCopyEx( gRenderer, structinput->mTexture, clip, &renderQuad, angle, center, flip );
 }
 
 
@@ -453,16 +454,24 @@ int main( int argc, char* args[] )
 
     int frame = 0;
 
+    //Angle of rotation
+    double degrees = 0;
+
+    //Flip type
+    SDL_RendererFlip flipType = SDL_FLIP_NONE;
+
     //Start up SDL and create window
-    if( !initVsyncRenderer() )
+    if( !initRenderer() )
     {
         printf( "Failed to initialize!\n" );
     }
     else
     {
-        struct textureStruct gSpriteSheetTexture;
-        gSpriteSheetTexture.imagePath = "14_animated_sprites_and_vsync/foo.png";
+        struct textureStruct gArrowTexture;
+        gArrowTexture.imagePath = "15_rotation_and_flipping/arrow.png";
 
+
+        /*
         gSpriteClips[ 0 ].x =   0;
         gSpriteClips[ 0 ].y =   0;
         gSpriteClips[ 0 ].w =  64;
@@ -482,12 +491,15 @@ int main( int argc, char* args[] )
         gSpriteClips[ 3 ].y =   0;
         gSpriteClips[ 3 ].w =  64;
         gSpriteClips[ 3 ].h = 205;
+        */
 
-        if( !LTexture(&gSpriteSheetTexture) )
+        if( !LTexture(&gArrowTexture) )
         {
             printf( "Failed to load media! \n" );
         }
 
+        gArrowTexture.xPos = ( SCREEN_WIDTH - gArrowTexture.mWidth ) / 2;
+        gArrowTexture.yPos = ( SCREEN_HEIGHT - gArrowTexture.mHeight ) / 2;
         //While application is running
         while( !quit )
         {
@@ -499,6 +511,31 @@ int main( int argc, char* args[] )
                 {
                     quit = true;
                 }
+                else if( e.type == SDL_KEYDOWN )
+                    {
+                        switch( e.key.keysym.sym )
+                        {
+                            case SDLK_a:
+                            degrees -= 60;
+                            break;
+
+                            case SDLK_d:
+                            degrees += 60;
+                            break;
+
+                            case SDLK_q:
+                            flipType = SDL_FLIP_HORIZONTAL;
+                            break;
+
+                            case SDLK_w:
+                            flipType = SDL_FLIP_NONE;
+                            break;
+
+                            case SDLK_e:
+                            flipType = SDL_FLIP_VERTICAL;
+                            break;
+                        }
+                    }
 
             }
 
@@ -506,16 +543,21 @@ int main( int argc, char* args[] )
                 SDL_SetRenderDrawColor( gRenderer, 0xFF, 0xFF, 0xFF, 0xFF );
                 SDL_RenderClear( gRenderer );
 
+                /*
                 SDL_Rect* currentClip = &gSpriteClips[ frame / 4 ];
                 gSpriteSheetTexture.xPos = (SCREEN_WIDTH - currentClip->w ) / 2;
                 gSpriteSheetTexture.yPos = ( SCREEN_HEIGHT - currentClip->h ) / 2;
+                */
 
-                textureRender(&gSpriteSheetTexture, currentClip);
+
+                textureRender(&gArrowTexture, NULL, degrees, NULL, flipType);
 
                 //Update screen
+
                 SDL_RenderPresent( gRenderer );
 
                 //Go to next frame
+                /*
                 ++frame;
 
                 //Cycle animation
@@ -523,6 +565,7 @@ int main( int argc, char* args[] )
                 {
                     frame = 0;
                 }
+                */
 
         }
    }
