@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <SDL.h>
 #include <SDL_image.h>
+#include <SDL_ttf.h>
 #include <stdbool.h>
 #include "Game1.h"
 
@@ -41,6 +42,7 @@ char imagePathViewport[64] = "09_the_viewport/viewport.png";
 
 SDL_Texture* newTexture = NULL;
 
+
 bool loadMediaGeometry();
 
 struct textureStruct
@@ -53,13 +55,29 @@ struct textureStruct
     SDL_Texture* mTexture;
 };
 
-void textureRender(struct textureStruct *structinput, SDL_Rect* clip, double angle, SDL_Point* center, SDL_RendererFlip flip);
+struct ttfStruct
+{
+    char *imagePath;
+    int mWidth;
+    int mHeight;
+    int xPos;
+    int yPos;
+    SDL_Texture* mTexture;
+    char *textureText;
+};
+
 
 bool LTexture(struct textureStruct *inputStruct);
 
 bool loadFromFile(char *path);
 void free();
 void render(int x, int y);
+
+
+bool loadFromRenderedText(struct ttfStruct *structinput, SDL_Color textColor );
+
+//Globally used font
+TTF_Font *gFont = NULL;
 
 SDL_Texture* mTexture;
 
@@ -169,6 +187,12 @@ bool initRenderer()
             }
         }
     }
+                     //Initialize SDL_ttf
+                if( TTF_Init() == -1 )
+                {
+                    printf( "SDL_ttf could not initialize! SDL_ttf Error: %s\n", TTF_GetError() );
+                    success = false;
+                }
     return success;
 }
 
@@ -278,51 +302,29 @@ SDL_Texture* loadTexture( char *path )
     return newTexture;
 }
 
-bool loadMedia()
+bool loadMedia(struct ttfStruct *structinput)
 {
     //Loading success flag
     bool success = true;
 
-    //Load default surface
-    gKeyPressSurfaces[ KEY_PRESS_SURFACE_DEFAULT ] = loadSurface( imagePathDef );
-    if( gKeyPressSurfaces[ KEY_PRESS_SURFACE_DEFAULT ] == NULL )
+    //Open the font
+    gFont = TTF_OpenFont( "16_true_type_fonts/lazy.ttf", 28 );
+    if( gFont == NULL )
     {
-        printf( "Failed to load default image!\n" );
+        printf( "Failed to load lazy font! SDL_ttf Error: %s\n", TTF_GetError() );
         success = false;
     }
-
-    //Load up surface
-    gKeyPressSurfaces[ KEY_PRESS_SURFACE_UP ] = loadSurface( imagePathUp );
-    if( gKeyPressSurfaces[ KEY_PRESS_SURFACE_UP ] == NULL )
+    else
     {
-        printf( "Failed to load up image!\n" );
-        success = false;
-    }
+        //Render text
 
-    //Load down surface
-    gKeyPressSurfaces[ KEY_PRESS_SURFACE_DOWN ] = loadSurface( imagePathDown );
-    if( gKeyPressSurfaces[ KEY_PRESS_SURFACE_DOWN ] == NULL )
-    {
-        printf( "Failed to load down image!\n" );
-        success = false;
+        SDL_Color textColor = { 0, 0, 0 };
+        if( !loadFromRenderedText(structinput, textColor) )
+        {
+            printf( "Failed to render text texture!\n" );
+            success = false;
+        }
     }
-
-    //Load left surface
-    gKeyPressSurfaces[ KEY_PRESS_SURFACE_LEFT ] = loadSurface( imagePathLeft );
-    if( gKeyPressSurfaces[ KEY_PRESS_SURFACE_LEFT ] == NULL )
-    {
-        printf( "Failed to load left image!\n" );
-        success = false;
-    }
-
-    //Load right surface
-    gKeyPressSurfaces[ KEY_PRESS_SURFACE_RIGHT ] = loadSurface( imagePathRight );
-    if( gKeyPressSurfaces[ KEY_PRESS_SURFACE_RIGHT ] == NULL )
-    {
-        printf( "Failed to load right image!\n" );
-        success = false;
-    }
-
     return success;
 }
 
@@ -357,11 +359,19 @@ void close()
     SDL_FreeSurface( gImage );
     gImage= NULL;
 
+    //Free global font
+    TTF_CloseFont( gFont );
+    gFont = NULL;
+
     //Destroy window
+    SDL_DestroyRenderer( gRenderer );
     SDL_DestroyWindow( gWindow );
     gWindow = NULL;
+    gRenderer = NULL;
 
     //Quit SDL subsystems
+    TTF_Quit();
+    IMG_Quit();
     SDL_Quit();
 }
 
@@ -418,7 +428,7 @@ bool LTexture(struct textureStruct *structinput)
     return newTexture != NULL;
 }
 
-void textureRender(struct textureStruct *structinput, SDL_Rect* clip, double angle, SDL_Point* center, SDL_RendererFlip flip)
+void textureRender(struct ttfStruct *structinput, SDL_Rect* clip, double angle, SDL_Point* center, SDL_RendererFlip flip)
 {
     //Set rendering space and render to screen
     SDL_Rect renderQuad = { structinput->xPos, structinput->yPos, structinput->mWidth, structinput->mHeight };
@@ -435,7 +445,39 @@ void textureRender(struct textureStruct *structinput, SDL_Rect* clip, double ang
     SDL_RenderCopyEx( gRenderer, structinput->mTexture, clip, &renderQuad, angle, center, flip );
 }
 
+bool loadFromRenderedText(struct ttfStruct *structinput, SDL_Color textColor )
+{
+    //Get rid of preexisting texture
+    //closeTexture();
+    //Render text surface
+    SDL_Surface* textSurface = TTF_RenderText_Solid( gFont, structinput->textureText, textColor );
+    if( textSurface == NULL )
+    {
+        printf( "Unable to render text surface! SDL_ttf Error: %s\n", TTF_GetError() );
+    }
+    else
+    {
+        //Create texture from surface pixels
+        mTexture = SDL_CreateTextureFromSurface( gRenderer, textSurface );
+        if( mTexture == NULL )
+        {
+            printf( "Unable to create texture from rendered text! SDL Error: %s\n", SDL_GetError() );
+        }
+        else
+        {
+            //Get image dimensions
+            structinput->mWidth = textSurface->w;
+            structinput->mHeight = textSurface->h;
+        }
 
+        //Get rid of old surface
+        SDL_FreeSurface( textSurface );
+    }
+
+    //Return success
+    structinput->mTexture = mTexture;
+    return mTexture != NULL;
+}
 
 int main( int argc, char* args[] )
 {
@@ -467,10 +509,10 @@ int main( int argc, char* args[] )
     }
     else
     {
-        struct textureStruct gArrowTexture;
-        gArrowTexture.imagePath = "15_rotation_and_flipping/arrow.png";
-
-
+        // struct textureStruct gArrowTexture;
+        // gArrowTexture.imagePath = "15_rotation_and_flipping/arrow.png";
+        struct ttfStruct gTextTexture;
+        gTextTexture.textureText = "This is my text duuude \n";
         /*
         gSpriteClips[ 0 ].x =   0;
         gSpriteClips[ 0 ].y =   0;
@@ -493,16 +535,19 @@ int main( int argc, char* args[] )
         gSpriteClips[ 3 ].h = 205;
         */
 
-        if( !LTexture(&gArrowTexture) )
+        if( !loadMedia(&gTextTexture) )
         {
             printf( "Failed to load media! \n" );
         }
-
+        /*
         gArrowTexture.xPos = ( SCREEN_WIDTH - gArrowTexture.mWidth ) / 2;
         gArrowTexture.yPos = ( SCREEN_HEIGHT - gArrowTexture.mHeight ) / 2;
+
+        */
         //While application is running
         while( !quit )
         {
+
             //Handle events on queue
             while( SDL_PollEvent( &e ) != 0 )
             {
@@ -511,6 +556,7 @@ int main( int argc, char* args[] )
                 {
                     quit = true;
                 }
+                /*
                 else if( e.type == SDL_KEYDOWN )
                     {
                         switch( e.key.keysym.sym )
@@ -536,6 +582,7 @@ int main( int argc, char* args[] )
                             break;
                         }
                     }
+                    */
 
             }
 
@@ -543,6 +590,10 @@ int main( int argc, char* args[] )
                 SDL_SetRenderDrawColor( gRenderer, 0xFF, 0xFF, 0xFF, 0xFF );
                 SDL_RenderClear( gRenderer );
 
+                //Render current frame
+                gTextTexture.xPos = ( SCREEN_WIDTH - gTextTexture.mWidth ) / 2;
+                gTextTexture.yPos = ( SCREEN_HEIGHT - gTextTexture.mHeight ) / 2;
+                textureRender(&gTextTexture, NULL, degrees, NULL, flipType);
                 /*
                 SDL_Rect* currentClip = &gSpriteClips[ frame / 4 ];
                 gSpriteSheetTexture.xPos = (SCREEN_WIDTH - currentClip->w ) / 2;
@@ -550,7 +601,7 @@ int main( int argc, char* args[] )
                 */
 
 
-                textureRender(&gArrowTexture, NULL, degrees, NULL, flipType);
+           //     textureRender(&gArrowTexture, NULL, degrees, NULL, flipType);
 
                 //Update screen
 

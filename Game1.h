@@ -18,9 +18,6 @@ bool init();
 //Starts up SDL and creates window that renders textures
 bool initRenderer();
 
-//Loads media
-bool loadMedia();
-
 //Frees media and shuts down SDL
 void close();
 
