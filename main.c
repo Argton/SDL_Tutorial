@@ -6,6 +6,20 @@
 #include <stdbool.h>
 #include "Game1.h"
 
+//Button constants
+const int BUTTON_WIDTH = 300;
+const int BUTTON_HEIGHT = 200;
+const int TOTAL_BUTTONS = 4;
+
+enum LButtonSprite
+{
+    BUTTON_SPRITE_MOUSE_OUT = 0,
+    BUTTON_SPRITE_MOUSE_OVER_MOTION = 1,
+    BUTTON_SPRITE_MOUSE_DOWN = 2,
+    BUTTON_SPRITE_MOUSE_UP = 3,
+    BUTTON_SPRITE_TOTAL = 4
+};
+
 //Loads individual image as texture
 SDL_Texture* loadTexture( char *path );
 
@@ -66,6 +80,23 @@ struct ttfStruct
     char *textureText;
 };
 
+struct buttonStruct
+{
+    char *imagePath;
+    int mWidth;
+    int mHeight;
+    int xPos;
+    int yPos;
+    SDL_Texture* mTexture;
+    char *textureText;
+    int mCurrentSprite;
+};
+
+void setPosition(struct buttonStruct *structInput, int x, int y)
+{
+    structInput->xPos = x;
+    structInput->yPos = y;
+}
 
 bool LTexture(struct textureStruct *inputStruct);
 
@@ -137,6 +168,8 @@ bool init()
     }
     return success;
 }
+
+//Handles mouse event
 
 bool initRenderer()
 {
@@ -428,7 +461,24 @@ bool LTexture(struct textureStruct *structinput)
     return newTexture != NULL;
 }
 
-void textureRender(struct ttfStruct *structinput, SDL_Rect* clip, double angle, SDL_Point* center, SDL_RendererFlip flip)
+void textureRenderttf(struct ttfStruct *structinput, SDL_Rect* clip, double angle, SDL_Point* center, SDL_RendererFlip flip)
+{
+    //Set rendering space and render to screen
+    SDL_Rect renderQuad = { structinput->xPos, structinput->yPos, structinput->mWidth, structinput->mHeight };
+
+    //Set clip rendering dimensions
+    if( clip != NULL )
+    {
+        renderQuad.w = clip->w;
+        renderQuad.h = clip->h;
+    }
+
+    //Render to screen
+    //SDL_RenderCopy( gRenderer, structinput->mTexture, clip, &renderQuad );
+    SDL_RenderCopyEx( gRenderer, structinput->mTexture, clip, &renderQuad, angle, center, flip );
+}
+
+void textureRender(struct textureStruct *structinput, SDL_Rect* clip, double angle, SDL_Point* center, SDL_RendererFlip flip)
 {
     //Set rendering space and render to screen
     SDL_Rect renderQuad = { structinput->xPos, structinput->yPos, structinput->mWidth, structinput->mHeight };
@@ -479,6 +529,68 @@ bool loadFromRenderedText(struct ttfStruct *structinput, SDL_Color textColor )
     return mTexture != NULL;
 }
 
+void handleEvent(struct buttonStruct *inputStruct, SDL_Event* e)
+{
+    //If mouse event happened
+    if( e->type == SDL_MOUSEMOTION || e->type == SDL_MOUSEBUTTONDOWN || e->type == SDL_MOUSEBUTTONUP )
+    {
+        //Get mouse position
+        int x, y;
+        SDL_GetMouseState( &x, &y );
+        //Check if mouse is in button
+        bool inside = true;
+
+        //Mouse is left of the button
+        if( x < inputStruct->xPos )
+        {
+            inside = false;
+        }
+        //Mouse is right of the button
+        else if( x > inputStruct->xPos + BUTTON_WIDTH )
+        {
+            inside = false;
+        }
+        //Mouse above the button
+        else if( y < inputStruct->yPos )
+        {
+            inside = false;
+        }
+        //Mouse below the button
+        else if( y > inputStruct->yPos + BUTTON_HEIGHT )
+        {
+            inside = false;
+        }
+                //Mouse is outside button
+        if( !inside )
+        {
+            inputStruct->mCurrentSprite = BUTTON_SPRITE_MOUSE_OUT;
+        }
+        //Mouse is inside button
+        else
+        {
+            //Set mouse over sprite
+            switch( e->type )
+            {
+                case SDL_MOUSEMOTION:
+                inputStruct->mCurrentSprite = BUTTON_SPRITE_MOUSE_OVER_MOTION;
+                break;
+
+                case SDL_MOUSEBUTTONDOWN:
+                inputStruct->mCurrentSprite = BUTTON_SPRITE_MOUSE_DOWN;
+                break;
+
+                case SDL_MOUSEBUTTONUP:
+                inputStruct->mCurrentSprite = BUTTON_SPRITE_MOUSE_UP;
+                break;
+            }
+        }
+    }
+}
+
+
+
+
+
 int main( int argc, char* args[] )
 {
     //Main loop flag
@@ -513,6 +625,38 @@ int main( int argc, char* args[] )
         // gArrowTexture.imagePath = "15_rotation_and_flipping/arrow.png";
         struct ttfStruct gTextTexture;
         gTextTexture.textureText = "This is my text duuude \n";
+
+        //Mouse button sprites
+        SDL_Rect gSpriteClips[ BUTTON_SPRITE_TOTAL ];
+        struct textureStruct gButtonSpriteSheetTexture;
+        gButtonSpriteSheetTexture.imagePath = "17_mouse_events/button.png";
+
+        //Buttons objects
+        struct buttonStruct gButtons1;
+        struct buttonStruct gButtons2;
+        struct buttonStruct gButtons3;
+        struct buttonStruct gButtons4;
+
+        gButtons1.xPos = 0;
+        gButtons1.yPos = 0;
+
+        gButtons2.xPos = SCREEN_WIDTH - BUTTON_WIDTH;
+        gButtons2.yPos = 0;
+
+        gButtons3.xPos = 0;
+        gButtons3.yPos = SCREEN_HEIGHT - BUTTON_HEIGHT;
+
+        gButtons4.xPos = SCREEN_WIDTH - BUTTON_WIDTH;
+        gButtons4.yPos = SCREEN_HEIGHT - BUTTON_HEIGHT;
+
+        for(int i = 0; i < BUTTON_SPRITE_TOTAL; ++i)
+        {
+            gSpriteClips[ i ].x = 0;
+			gSpriteClips[ i ].y = i * 200;
+			gSpriteClips[ i ].w = BUTTON_WIDTH;
+			gSpriteClips[ i ].h = BUTTON_HEIGHT;
+        }
+
         /*
         gSpriteClips[ 0 ].x =   0;
         gSpriteClips[ 0 ].y =   0;
@@ -535,7 +679,7 @@ int main( int argc, char* args[] )
         gSpriteClips[ 3 ].h = 205;
         */
 
-        if( !loadMedia(&gTextTexture) )
+        if( !LTexture(&gButtonSpriteSheetTexture) )
         {
             printf( "Failed to load media! \n" );
         }
@@ -556,6 +700,12 @@ int main( int argc, char* args[] )
                 {
                     quit = true;
                 }
+
+                handleEvent(&gButtons1, &e);
+                handleEvent(&gButtons2, &e);
+                handleEvent(&gButtons3, &e);
+                handleEvent(&gButtons4, &e);
+
                 /*
                 else if( e.type == SDL_KEYDOWN )
                     {
@@ -590,11 +740,44 @@ int main( int argc, char* args[] )
                 SDL_SetRenderDrawColor( gRenderer, 0xFF, 0xFF, 0xFF, 0xFF );
                 SDL_RenderClear( gRenderer );
 
+                //Render buttons
+             //   gButtonSpriteSheetTexture.render( mPosition.x, mPosition.y, &gSpriteClips[ mCurrentSprite ] );
+                gButtonSpriteSheetTexture.xPos = 0;
+                gButtonSpriteSheetTexture.yPos = 0 * 200;
+                setPosition(&gButtons1, 0, 0);
+                //textureRender(&gButtonSpriteSheetTexture, NULL, degrees, NULL, flipType);
+                //textureRender(&gButtons1, NULL, degrees, NULL, flipType);
+
+                gButtonSpriteSheetTexture.xPos = gButtons1.xPos;
+                gButtonSpriteSheetTexture.yPos = gButtons1.yPos;
+                textureRender(&gButtonSpriteSheetTexture, &gSpriteClips[ gButtons1.mCurrentSprite ], 0, NULL, flipType);
+
+                gButtonSpriteSheetTexture.xPos = gButtons2.xPos;
+                gButtonSpriteSheetTexture.yPos = gButtons2.yPos;
+                textureRender(&gButtonSpriteSheetTexture, &gSpriteClips[ gButtons2.mCurrentSprite ], 0, NULL, flipType);
+
+                gButtonSpriteSheetTexture.xPos = gButtons3.xPos;
+                gButtonSpriteSheetTexture.yPos = gButtons3.yPos;
+                textureRender(&gButtonSpriteSheetTexture, &gSpriteClips[ gButtons3.mCurrentSprite ], 0, NULL, flipType);
+
+                gButtonSpriteSheetTexture.xPos = gButtons4.xPos;
+                gButtonSpriteSheetTexture.yPos = gButtons4.yPos;
+                textureRender(&gButtonSpriteSheetTexture, &gSpriteClips[ gButtons4.mCurrentSprite ], 0, NULL, flipType);
+
+
+                //struct textureStruct *structinput, SDL_Rect* clip, double angle, SDL_Point* center, SDL_RendererFlip flip
+                //gButtonSpriteSheetTexture.render( gButtons1.xPos, Buttons1.yPos, &gSpriteClips[ mCurrentSprite ] );
+                //gButtonSpriteSheetTexture.render( mPosition.x, mPosition.y, &gSpriteClips[ mCurrentSprite ] );
+				//	gButtons[ i ].render();
+
+
+
                 //Render current frame
+                /*
                 gTextTexture.xPos = ( SCREEN_WIDTH - gTextTexture.mWidth ) / 2;
                 gTextTexture.yPos = ( SCREEN_HEIGHT - gTextTexture.mHeight ) / 2;
                 textureRender(&gTextTexture, NULL, degrees, NULL, flipType);
-                /*
+
                 SDL_Rect* currentClip = &gSpriteClips[ frame / 4 ];
                 gSpriteSheetTexture.xPos = (SCREEN_WIDTH - currentClip->w ) / 2;
                 gSpriteSheetTexture.yPos = ( SCREEN_HEIGHT - currentClip->h ) / 2;
