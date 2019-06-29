@@ -802,10 +802,12 @@ int main( int argc, char* args[] )
                 */
 
         }
+        SDL_DestroyTexture( gButtonSpriteSheetTexture.mTexture );
    }
 
         //Free resources and close SDL
         closeTexture();
+        close();
         return 0;
 }
 
