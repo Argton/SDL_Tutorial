@@ -33,7 +33,7 @@
 			<Add directory="C:/Users/Anton/Desktop/Code/SDL2/i686-w64-mingw32/include/SDL2" />
 		</Compiler>
 		<Linker>
-			<Add option="-lmingw32 -lSDL2main -lSDL2 -lSDL2_image -lSDL2_ttf" />
+			<Add option="-lmingw32 -lSDL2main -lSDL2 -lSDL2_image -lSDL2_ttf -lSDL2_mixer" />
 			<Add directory="C:/Users/Anton/Desktop/Code/SDL2/i686-w64-mingw32/lib" />
 		</Linker>
 		<Unit filename="Game1.h" />

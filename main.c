@@ -2,9 +2,11 @@
 #include <stdlib.h>
 #include <SDL.h>
 #include <SDL_image.h>
+#include <SDL_mixer.h>
 #include <SDL_ttf.h>
 #include <stdbool.h>
 #include "Game1.h"
+
 
 //Button constants
 const int BUTTON_WIDTH = 300;
@@ -92,6 +94,18 @@ struct buttonStruct
     int mCurrentSprite;
 };
 
+struct musicStruct
+{
+    Mix_Music *gMusic;
+    char *musicPath;
+};
+
+struct soundStruct
+{
+    Mix_Chunk *gSound;
+    char *musicPath;
+};
+
 void setPosition(struct buttonStruct *structInput, int x, int y)
 {
     structInput->xPos = x;
@@ -136,7 +150,7 @@ bool init()
     bool success = true;
 
     //Initialize SDL
-    if( SDL_Init( SDL_INIT_VIDEO ) < 0 )
+    if( SDL_Init( SDL_INIT_VIDEO | SDL_INIT_AUDIO  ) < 0 )
     {
         printf( "SDL could not initialize! SDL_Error: %s\n", SDL_GetError() );
         success = false;
@@ -166,10 +180,38 @@ bool init()
             }
         }
     }
+        //Initialize SDL_mixer
+        if( Mix_OpenAudio( 44100, MIX_DEFAULT_FORMAT, 2, 2048 ) < 0 )
+        {
+            printf( "SDL_mixer could not initialize! SDL_mixer Error: %s\n", Mix_GetError() );
+            success = false;
+        }
     return success;
 }
 
-//Handles mouse event
+bool loadMusic(struct musicStruct *inputStruct)
+{
+    bool success = true;
+    inputStruct->gMusic = Mix_LoadMUS( inputStruct->musicPath );
+    if( inputStruct->gMusic == NULL )
+    {
+        printf( "Failed to load music! SDL_mixer Error: %s\n", Mix_GetError() );
+        success = false;
+    }
+    return success;
+}
+
+bool loadSound(struct soundStruct *inputStruct)
+{
+    bool success = true;
+    inputStruct->gSound = Mix_LoadWAV( inputStruct->musicPath );
+    if( inputStruct->gSound == NULL )
+    {
+        printf( "Failed to load music! SDL_mixer Error: %s\n", Mix_GetError() );
+        success = false;
+    }
+    return success;
+}
 
 bool initRenderer()
 {
@@ -177,7 +219,7 @@ bool initRenderer()
     bool success = true;
 
     //Initialize SDL
-    if( SDL_Init( SDL_INIT_VIDEO ) < 0 )
+    if( SDL_Init( SDL_INIT_VIDEO | SDL_INIT_AUDIO ) < 0 )
     {
         printf( "SDL could not initialize! SDL_Error: %s\n", SDL_GetError() );
         success = false;
@@ -226,6 +268,12 @@ bool initRenderer()
                     printf( "SDL_ttf could not initialize! SDL_ttf Error: %s\n", TTF_GetError() );
                     success = false;
                 }
+                        //Initialize SDL_mixer
+        if( Mix_OpenAudio( 44100, MIX_DEFAULT_FORMAT, 2, 2048 ) < 0 )
+        {
+            printf( "SDL_mixer could not initialize! SDL_mixer Error: %s\n", Mix_GetError() );
+            success = false;
+        }
     return success;
 }
 
@@ -402,10 +450,13 @@ void close()
     gWindow = NULL;
     gRenderer = NULL;
 
+    //Free the music
+
     //Quit SDL subsystems
     TTF_Quit();
     IMG_Quit();
     SDL_Quit();
+    Mix_Quit();
 }
 
 void closeTexture()
@@ -626,6 +677,25 @@ int main( int argc, char* args[] )
         struct textureStruct gLeftTexture;
         struct textureStruct gRightTexture;
         struct textureStruct currentTexture;
+        struct musicStruct gMusicStruct;
+        struct soundStruct gScratch;
+        struct soundStruct gHigh;
+        struct soundStruct gMedium;
+        struct soundStruct gLow;
+        struct textureStruct gPromptTexture;
+
+        gPromptTexture.imagePath = "21_sound_effects_and_music/prompt.png";
+        gMusicStruct.musicPath = "21_sound_effects_and_music/beat.wav";
+        loadMusic(&gMusicStruct);
+        gScratch.musicPath = "21_sound_effects_and_music/scratch.wav";
+        loadSound(&gScratch);
+        gHigh.musicPath = "21_sound_effects_and_music/high.wav";
+        loadSound(&gHigh);
+        gMedium.musicPath = "21_sound_effects_and_music/medium.wav";
+        loadSound(&gMedium);
+        gLow.musicPath = "21_sound_effects_and_music/low.wav";
+        loadSound(&gLow);
+
 
         gPressTexture.imagePath = "18_key_states/press.png";
         gUpTexture.imagePath = "18_key_states/up.png";
@@ -633,6 +703,8 @@ int main( int argc, char* args[] )
         gLeftTexture.imagePath = "18_key_states/left.png";
         gRightTexture.imagePath = "18_key_states/right.png";
 
+        gPromptTexture.xPos = 0;
+        gPromptTexture.yPos = 0;
 
         gPressTexture.xPos = 0;
         gPressTexture.yPos = 0;
@@ -724,6 +796,10 @@ int main( int argc, char* args[] )
         {
             printf( "Failed to load media! \n" );
         }
+        if( !LTexture(&gPromptTexture) )
+        {
+            printf( "Failed to load media! \n" );
+        }
 
 /*
         gArrowTexture.xPos = ( SCREEN_WIDTH - gArrowTexture.mWidth ) / 2;
@@ -742,6 +818,60 @@ int main( int argc, char* args[] )
                 {
                     quit = true;
                 }
+                else if( e.type == SDL_KEYDOWN )
+                    {
+                        switch( e.key.keysym.sym )
+                        {
+                            //Play high sound effect
+                            case SDLK_1:
+                            Mix_PlayChannel( -1, gHigh.gSound, 0 );
+                            break;
+
+                            //Play medium sound effect
+                            case SDLK_2:
+                            Mix_PlayChannel( -1, gMedium.gSound, 0 );
+                            break;
+
+                            //Play low sound effect
+                            case SDLK_3:
+                            Mix_PlayChannel( -1, gLow.gSound, 0 );
+                            break;
+
+                            //Play scratch sound effect
+                            case SDLK_4:
+                            Mix_PlayChannel( -1, gScratch.gSound, 0 );
+                            break;
+                             case SDLK_9:
+                            //If there is no music playing
+                            if( Mix_PlayingMusic() == 0 )
+                            {
+                                //Play the music
+                                Mix_PlayMusic( gMusicStruct.gMusic, -1 );
+                            }
+                            //If music is being played
+                            else
+                            {
+                                //If the music is paused
+                                if( Mix_PausedMusic() == 1 )
+                                {
+                                    //Resume the music
+                                    Mix_ResumeMusic();
+                                }
+                                //If the music is playing
+                                else
+                                {
+                                    //Pause the music
+                                    Mix_PauseMusic();
+                                }
+                            }
+                            break;
+
+                            case SDLK_0:
+                            //Stop the music
+                            Mix_HaltMusic();
+                            break;
+                        }
+                    }
 
                 /*
                 handleEvent(&gButtons1, &e);
@@ -808,7 +938,8 @@ int main( int argc, char* args[] )
                 SDL_SetRenderDrawColor( gRenderer, 0xFF, 0xFF, 0xFF, 0xFF );
                 SDL_RenderClear( gRenderer );
 
-                textureRender(&currentTexture, NULL, degrees, NULL, flipType);
+                textureRender(&gPromptTexture, NULL, degrees, NULL, flipType);
+                //loadMusic("21_sound_effects_and_music/beat.wav");
 
 
                 /*
@@ -879,6 +1010,18 @@ int main( int argc, char* args[] )
         SDL_DestroyTexture( gDownTexture.mTexture );
         SDL_DestroyTexture( gLeftTexture.mTexture );
         SDL_DestroyTexture( gRightTexture.mTexture );
+        Mix_FreeChunk( gScratch.gSound );
+        Mix_FreeChunk( gHigh.gSound );
+        Mix_FreeChunk( gMedium.gSound );
+        Mix_FreeChunk( gLow.gSound );
+        Mix_FreeMusic( gMusicStruct.gMusic );
+        gScratch.gSound = NULL;
+        gHigh.gSound = NULL;
+        gMedium.gSound = NULL;
+        gLow.gSound = NULL;
+        gMusicStruct.gMusic = NULL;
+
+
    }
 
         //Free resources and close SDL
@@ -1011,3 +1154,4 @@ void createPic()
     }
 }
 */
+
