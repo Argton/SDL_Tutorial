@@ -42,7 +42,7 @@ SDL_Surface* loadSurface( char *path );
 SDL_Surface* gKeyPressSurfaces[ KEY_PRESS_SURFACE_TOTAL ];
 
 //Current displayed image
-SDL_Surface* gCurrentSurface = NULL;
+//SDL_Surface* gCurrentSurface = NULL;
 
 //The image we will load and show on the screen
 SDL_Surface* gImage = NULL;
@@ -489,7 +489,6 @@ void textureRender(struct textureStruct *structinput, SDL_Rect* clip, double ang
         renderQuad.w = clip->w;
         renderQuad.h = clip->h;
     }
-
     //Render to screen
     //SDL_RenderCopy( gRenderer, structinput->mTexture, clip, &renderQuad );
     SDL_RenderCopyEx( gRenderer, structinput->mTexture, clip, &renderQuad, angle, center, flip );
@@ -621,9 +620,34 @@ int main( int argc, char* args[] )
     }
     else
     {
+        struct textureStruct gPressTexture;
+        struct textureStruct gUpTexture;
+        struct textureStruct gDownTexture;
+        struct textureStruct gLeftTexture;
+        struct textureStruct gRightTexture;
+        struct textureStruct currentTexture;
+
+        gPressTexture.imagePath = "18_key_states/press.png";
+        gUpTexture.imagePath = "18_key_states/up.png";
+        gDownTexture.imagePath = "18_key_states/down.png";
+        gLeftTexture.imagePath = "18_key_states/left.png";
+        gRightTexture.imagePath = "18_key_states/right.png";
+
+
+        gPressTexture.xPos = 0;
+        gPressTexture.yPos = 0;
+        gUpTexture.xPos = 0;
+        gUpTexture.yPos = 0;
+        gDownTexture.xPos = 0;
+        gDownTexture.yPos = 0;
+        gLeftTexture.xPos = 0;
+        gLeftTexture.yPos = 0;
+        gRightTexture.xPos = 0;
+        gRightTexture.yPos = 0;
+
         // struct textureStruct gArrowTexture;
         // gArrowTexture.imagePath = "15_rotation_and_flipping/arrow.png";
-        struct ttfStruct gTextTexture;
+       /* struct ttfStruct gTextTexture;
         gTextTexture.textureText = "This is my text duuude \n";
 
         //Mouse button sprites
@@ -656,7 +680,7 @@ int main( int argc, char* args[] )
 			gSpriteClips[ i ].w = BUTTON_WIDTH;
 			gSpriteClips[ i ].h = BUTTON_HEIGHT;
         }
-
+        */
         /*
         gSpriteClips[ 0 ].x =   0;
         gSpriteClips[ 0 ].y =   0;
@@ -679,15 +703,33 @@ int main( int argc, char* args[] )
         gSpriteClips[ 3 ].h = 205;
         */
 
-        if( !LTexture(&gButtonSpriteSheetTexture) )
+        if( !LTexture(&gPressTexture) )
         {
             printf( "Failed to load media! \n" );
         }
-        /*
+
+        if( !LTexture(&gUpTexture) )
+        {
+            printf( "Failed to load media! \n" );
+        }
+        if( !LTexture(&gDownTexture) )
+        {
+            printf( "Failed to load media! \n" );
+        }
+        if( !LTexture(&gLeftTexture) )
+        {
+            printf( "Failed to load media! \n" );
+        }
+        if( !LTexture(&gRightTexture) )
+        {
+            printf( "Failed to load media! \n" );
+        }
+
+/*
         gArrowTexture.xPos = ( SCREEN_WIDTH - gArrowTexture.mWidth ) / 2;
         gArrowTexture.yPos = ( SCREEN_HEIGHT - gArrowTexture.mHeight ) / 2;
+*/
 
-        */
         //While application is running
         while( !quit )
         {
@@ -701,10 +743,12 @@ int main( int argc, char* args[] )
                     quit = true;
                 }
 
+                /*
                 handleEvent(&gButtons1, &e);
                 handleEvent(&gButtons2, &e);
                 handleEvent(&gButtons3, &e);
                 handleEvent(&gButtons4, &e);
+                */
 
                 /*
                 else if( e.type == SDL_KEYDOWN )
@@ -736,10 +780,38 @@ int main( int argc, char* args[] )
 
             }
 
+                //Set texture based on current keystate
+                const Uint8* currentKeyStates = SDL_GetKeyboardState( NULL );
+                if( currentKeyStates[ SDL_SCANCODE_UP ] )
+                {
+                    currentTexture = gUpTexture;
+                }
+                else if( currentKeyStates[ SDL_SCANCODE_DOWN ] )
+                {
+                    currentTexture = gDownTexture;
+                }
+                else if( currentKeyStates[ SDL_SCANCODE_LEFT ] )
+                {
+                    currentTexture = gLeftTexture;
+                }
+                else if( currentKeyStates[ SDL_SCANCODE_RIGHT ] )
+                {
+                    currentTexture = gRightTexture;
+                }
+                else
+                {
+                    currentTexture = gPressTexture;
+                }
+
+
                 //Clear screen
                 SDL_SetRenderDrawColor( gRenderer, 0xFF, 0xFF, 0xFF, 0xFF );
                 SDL_RenderClear( gRenderer );
 
+                textureRender(&currentTexture, NULL, degrees, NULL, flipType);
+
+
+                /*
                 //Render buttons
              //   gButtonSpriteSheetTexture.render( mPosition.x, mPosition.y, &gSpriteClips[ mCurrentSprite ] );
                 gButtonSpriteSheetTexture.xPos = 0;
@@ -769,7 +841,7 @@ int main( int argc, char* args[] )
                 //gButtonSpriteSheetTexture.render( gButtons1.xPos, Buttons1.yPos, &gSpriteClips[ mCurrentSprite ] );
                 //gButtonSpriteSheetTexture.render( mPosition.x, mPosition.y, &gSpriteClips[ mCurrentSprite ] );
 				//	gButtons[ i ].render();
-
+                */
 
 
                 //Render current frame
@@ -802,7 +874,11 @@ int main( int argc, char* args[] )
                 */
 
         }
-        SDL_DestroyTexture( gButtonSpriteSheetTexture.mTexture );
+        SDL_DestroyTexture( gPressTexture.mTexture );
+        SDL_DestroyTexture( gUpTexture.mTexture );
+        SDL_DestroyTexture( gDownTexture.mTexture );
+        SDL_DestroyTexture( gLeftTexture.mTexture );
+        SDL_DestroyTexture( gRightTexture.mTexture );
    }
 
         //Free resources and close SDL
