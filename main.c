@@ -5,6 +5,7 @@
 #include <SDL_mixer.h>
 #include <SDL_ttf.h>
 #include <stdbool.h>
+#include <string.h>
 #include "Game1.h"
 
 
@@ -80,6 +81,7 @@ struct ttfStruct
     int yPos;
     SDL_Texture* mTexture;
     char *textureText;
+    SDL_Color textColor;
 };
 
 struct buttonStruct
@@ -389,7 +391,7 @@ bool loadMedia(struct ttfStruct *structinput)
     bool success = true;
 
     //Open the font
-    gFont = TTF_OpenFont( "16_true_type_fonts/lazy.ttf", 28 );
+    gFont = TTF_OpenFont( structinput->imagePath, 28 );
     if( gFont == NULL )
     {
         printf( "Failed to load lazy font! SDL_ttf Error: %s\n", TTF_GetError() );
@@ -399,7 +401,7 @@ bool loadMedia(struct ttfStruct *structinput)
     {
         //Render text
 
-        SDL_Color textColor = { 0, 0, 0 };
+        SDL_Color textColor = { 0, 0, 0, 255 };
         if( !loadFromRenderedText(structinput, textColor) )
         {
             printf( "Failed to render text texture!\n" );
@@ -658,6 +660,12 @@ int main( int argc, char* args[] )
 
     int frame = 0;
 
+    //Set text color as black
+    SDL_Color textColor = { 0, 0, 0, 255 };
+
+    //Current time start time
+    Uint32 startTime = 0;
+
     //Angle of rotation
     double degrees = 0;
 
@@ -671,132 +679,20 @@ int main( int argc, char* args[] )
     }
     else
     {
-        struct textureStruct gPressTexture;
-        struct textureStruct gUpTexture;
-        struct textureStruct gDownTexture;
-        struct textureStruct gLeftTexture;
-        struct textureStruct gRightTexture;
-        struct textureStruct currentTexture;
-        struct musicStruct gMusicStruct;
-        struct soundStruct gScratch;
-        struct soundStruct gHigh;
-        struct soundStruct gMedium;
-        struct soundStruct gLow;
-        struct textureStruct gPromptTexture;
+        struct ttfStruct gPromptTexture;
+        struct ttfStruct gTimeTexture;
 
-        gPromptTexture.imagePath = "21_sound_effects_and_music/prompt.png";
-        gMusicStruct.musicPath = "21_sound_effects_and_music/beat.wav";
-        loadMusic(&gMusicStruct);
-        gScratch.musicPath = "21_sound_effects_and_music/scratch.wav";
-        loadSound(&gScratch);
-        gHigh.musicPath = "21_sound_effects_and_music/high.wav";
-        loadSound(&gHigh);
-        gMedium.musicPath = "21_sound_effects_and_music/medium.wav";
-        loadSound(&gMedium);
-        gLow.musicPath = "21_sound_effects_and_music/low.wav";
-        loadSound(&gLow);
-
-
-        gPressTexture.imagePath = "18_key_states/press.png";
-        gUpTexture.imagePath = "18_key_states/up.png";
-        gDownTexture.imagePath = "18_key_states/down.png";
-        gLeftTexture.imagePath = "18_key_states/left.png";
-        gRightTexture.imagePath = "18_key_states/right.png";
-
+        gPromptTexture.imagePath = "22_timing/lazy.ttf";
         gPromptTexture.xPos = 0;
         gPromptTexture.yPos = 0;
-
-        gPressTexture.xPos = 0;
-        gPressTexture.yPos = 0;
-        gUpTexture.xPos = 0;
-        gUpTexture.yPos = 0;
-        gDownTexture.xPos = 0;
-        gDownTexture.yPos = 0;
-        gLeftTexture.xPos = 0;
-        gLeftTexture.yPos = 0;
-        gRightTexture.xPos = 0;
-        gRightTexture.yPos = 0;
-
-        // struct textureStruct gArrowTexture;
-        // gArrowTexture.imagePath = "15_rotation_and_flipping/arrow.png";
-       /* struct ttfStruct gTextTexture;
-        gTextTexture.textureText = "This is my text duuude \n";
-
-        //Mouse button sprites
-        SDL_Rect gSpriteClips[ BUTTON_SPRITE_TOTAL ];
-        struct textureStruct gButtonSpriteSheetTexture;
-        gButtonSpriteSheetTexture.imagePath = "17_mouse_events/button.png";
-
-        //Buttons objects
-        struct buttonStruct gButtons1;
-        struct buttonStruct gButtons2;
-        struct buttonStruct gButtons3;
-        struct buttonStruct gButtons4;
-
-        gButtons1.xPos = 0;
-        gButtons1.yPos = 0;
-
-        gButtons2.xPos = SCREEN_WIDTH - BUTTON_WIDTH;
-        gButtons2.yPos = 0;
-
-        gButtons3.xPos = 0;
-        gButtons3.yPos = SCREEN_HEIGHT - BUTTON_HEIGHT;
-
-        gButtons4.xPos = SCREEN_WIDTH - BUTTON_WIDTH;
-        gButtons4.yPos = SCREEN_HEIGHT - BUTTON_HEIGHT;
-
-        for(int i = 0; i < BUTTON_SPRITE_TOTAL; ++i)
-        {
-            gSpriteClips[ i ].x = 0;
-			gSpriteClips[ i ].y = i * 200;
-			gSpriteClips[ i ].w = BUTTON_WIDTH;
-			gSpriteClips[ i ].h = BUTTON_HEIGHT;
-        }
-        */
-        /*
-        gSpriteClips[ 0 ].x =   0;
-        gSpriteClips[ 0 ].y =   0;
-        gSpriteClips[ 0 ].w =  64;
-        gSpriteClips[ 0 ].h = 205;
-
-        gSpriteClips[ 1 ].x =  64;
-        gSpriteClips[ 1 ].y =   0;
-        gSpriteClips[ 1 ].w =  64;
-        gSpriteClips[ 1 ].h = 205;
-
-        gSpriteClips[ 2 ].x = 128;
-        gSpriteClips[ 2 ].y =   0;
-        gSpriteClips[ 2 ].w =  64;
-        gSpriteClips[ 2 ].h = 205;
-
-        gSpriteClips[ 3 ].x = 196;
-        gSpriteClips[ 3 ].y =   0;
-        gSpriteClips[ 3 ].w =  64;
-        gSpriteClips[ 3 ].h = 205;
-        */
-
-        if( !LTexture(&gPressTexture) )
+        gPromptTexture.textureText = "Press Enter to Reset Start Time.";
+        gTimeTexture.imagePath = "22_timing/lazy.ttf";
+        gTimeTexture.textureText = "LMAO";
+        if( !loadMedia(&gPromptTexture) )
         {
             printf( "Failed to load media! \n" );
         }
-
-        if( !LTexture(&gUpTexture) )
-        {
-            printf( "Failed to load media! \n" );
-        }
-        if( !LTexture(&gDownTexture) )
-        {
-            printf( "Failed to load media! \n" );
-        }
-        if( !LTexture(&gLeftTexture) )
-        {
-            printf( "Failed to load media! \n" );
-        }
-        if( !LTexture(&gRightTexture) )
-        {
-            printf( "Failed to load media! \n" );
-        }
-        if( !LTexture(&gPromptTexture) )
+        if( !loadMedia(&gTimeTexture) )
         {
             printf( "Failed to load media! \n" );
         }
@@ -818,208 +714,50 @@ int main( int argc, char* args[] )
                 {
                     quit = true;
                 }
-                else if( e.type == SDL_KEYDOWN )
-                    {
-                        switch( e.key.keysym.sym )
-                        {
-                            //Play high sound effect
-                            case SDLK_1:
-                            Mix_PlayChannel( -1, gHigh.gSound, 0 );
-                            break;
-
-                            //Play medium sound effect
-                            case SDLK_2:
-                            Mix_PlayChannel( -1, gMedium.gSound, 0 );
-                            break;
-
-                            //Play low sound effect
-                            case SDLK_3:
-                            Mix_PlayChannel( -1, gLow.gSound, 0 );
-                            break;
-
-                            //Play scratch sound effect
-                            case SDLK_4:
-                            Mix_PlayChannel( -1, gScratch.gSound, 0 );
-                            break;
-                             case SDLK_9:
-                            //If there is no music playing
-                            if( Mix_PlayingMusic() == 0 )
-                            {
-                                //Play the music
-                                Mix_PlayMusic( gMusicStruct.gMusic, -1 );
-                            }
-                            //If music is being played
-                            else
-                            {
-                                //If the music is paused
-                                if( Mix_PausedMusic() == 1 )
-                                {
-                                    //Resume the music
-                                    Mix_ResumeMusic();
-                                }
-                                //If the music is playing
-                                else
-                                {
-                                    //Pause the music
-                                    Mix_PauseMusic();
-                                }
-                            }
-                            break;
-
-                            case SDLK_0:
-                            //Stop the music
-                            Mix_HaltMusic();
-                            break;
-                        }
-                    }
-
-                /*
-                handleEvent(&gButtons1, &e);
-                handleEvent(&gButtons2, &e);
-                handleEvent(&gButtons3, &e);
-                handleEvent(&gButtons4, &e);
-                */
-
-                /*
-                else if( e.type == SDL_KEYDOWN )
-                    {
-                        switch( e.key.keysym.sym )
-                        {
-                            case SDLK_a:
-                            degrees -= 60;
-                            break;
-
-                            case SDLK_d:
-                            degrees += 60;
-                            break;
-
-                            case SDLK_q:
-                            flipType = SDL_FLIP_HORIZONTAL;
-                            break;
-
-                            case SDLK_w:
-                            flipType = SDL_FLIP_NONE;
-                            break;
-
-                            case SDLK_e:
-                            flipType = SDL_FLIP_VERTICAL;
-                            break;
-                        }
-                    }
-                    */
-
+                //Reset start time on return keypress
+                else if( e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_RETURN )
+                {
+                    startTime = SDL_GetTicks();
+                }
             }
 
-                //Set texture based on current keystate
-                const Uint8* currentKeyStates = SDL_GetKeyboardState( NULL );
-                if( currentKeyStates[ SDL_SCANCODE_UP ] )
-                {
-                    currentTexture = gUpTexture;
-                }
-                else if( currentKeyStates[ SDL_SCANCODE_DOWN ] )
-                {
-                    currentTexture = gDownTexture;
-                }
-                else if( currentKeyStates[ SDL_SCANCODE_LEFT ] )
-                {
-                    currentTexture = gLeftTexture;
-                }
-                else if( currentKeyStates[ SDL_SCANCODE_RIGHT ] )
-                {
-                    currentTexture = gRightTexture;
-                }
-                else
-                {
-                    currentTexture = gPressTexture;
-                }
+                //Set text to be rendered
+                char timeText[100] = "";
+                char timeBuffer[100] = "";
+
+                // printf("LMffao \n");
+
+
+                strcpy(timeText, "Milliseconds since start time ");
+                // printf(timeText);
+                sprintf(timeBuffer, "%d", SDL_GetTicks() - startTime);
+                strcat(timeText, timeBuffer);
+                //printf(timeText);
 
 
                 //Clear screen
                 SDL_SetRenderDrawColor( gRenderer, 0xFF, 0xFF, 0xFF, 0xFF );
                 SDL_RenderClear( gRenderer );
+                gPromptTexture.xPos = (SCREEN_WIDTH - gPromptTexture.mWidth) / 2;
+                gPromptTexture.yPos = 0;
+                textureRenderttf(&gPromptTexture, NULL, degrees, NULL, flipType);
 
-                textureRender(&gPromptTexture, NULL, degrees, NULL, flipType);
-                //loadMusic("21_sound_effects_and_music/beat.wav");
+                gTimeTexture.xPos = (SCREEN_WIDTH - gPromptTexture.mWidth) / 2;
+                gTimeTexture.yPos = (SCREEN_HEIGHT - gPromptTexture.mHeight ) / 2;
+                gTimeTexture.textureText = timeText;
+                if( !loadMedia(&gTimeTexture) )
+                {
+                    printf( "Failed to load media! \n" );
+                }
+                textureRenderttf(&gTimeTexture, NULL, degrees, NULL, flipType);
 
+           //     textureRender(&gPromptTexture, NULL, degrees, NULL, flipType);
 
-                /*
-                //Render buttons
-             //   gButtonSpriteSheetTexture.render( mPosition.x, mPosition.y, &gSpriteClips[ mCurrentSprite ] );
-                gButtonSpriteSheetTexture.xPos = 0;
-                gButtonSpriteSheetTexture.yPos = 0 * 200;
-                setPosition(&gButtons1, 0, 0);
-                //textureRender(&gButtonSpriteSheetTexture, NULL, degrees, NULL, flipType);
-                //textureRender(&gButtons1, NULL, degrees, NULL, flipType);
-
-                gButtonSpriteSheetTexture.xPos = gButtons1.xPos;
-                gButtonSpriteSheetTexture.yPos = gButtons1.yPos;
-                textureRender(&gButtonSpriteSheetTexture, &gSpriteClips[ gButtons1.mCurrentSprite ], 0, NULL, flipType);
-
-                gButtonSpriteSheetTexture.xPos = gButtons2.xPos;
-                gButtonSpriteSheetTexture.yPos = gButtons2.yPos;
-                textureRender(&gButtonSpriteSheetTexture, &gSpriteClips[ gButtons2.mCurrentSprite ], 0, NULL, flipType);
-
-                gButtonSpriteSheetTexture.xPos = gButtons3.xPos;
-                gButtonSpriteSheetTexture.yPos = gButtons3.yPos;
-                textureRender(&gButtonSpriteSheetTexture, &gSpriteClips[ gButtons3.mCurrentSprite ], 0, NULL, flipType);
-
-                gButtonSpriteSheetTexture.xPos = gButtons4.xPos;
-                gButtonSpriteSheetTexture.yPos = gButtons4.yPos;
-                textureRender(&gButtonSpriteSheetTexture, &gSpriteClips[ gButtons4.mCurrentSprite ], 0, NULL, flipType);
-
-
-                //struct textureStruct *structinput, SDL_Rect* clip, double angle, SDL_Point* center, SDL_RendererFlip flip
-                //gButtonSpriteSheetTexture.render( gButtons1.xPos, Buttons1.yPos, &gSpriteClips[ mCurrentSprite ] );
-                //gButtonSpriteSheetTexture.render( mPosition.x, mPosition.y, &gSpriteClips[ mCurrentSprite ] );
-				//	gButtons[ i ].render();
-                */
-
-
-                //Render current frame
-                /*
-                gTextTexture.xPos = ( SCREEN_WIDTH - gTextTexture.mWidth ) / 2;
-                gTextTexture.yPos = ( SCREEN_HEIGHT - gTextTexture.mHeight ) / 2;
-                textureRender(&gTextTexture, NULL, degrees, NULL, flipType);
-
-                SDL_Rect* currentClip = &gSpriteClips[ frame / 4 ];
-                gSpriteSheetTexture.xPos = (SCREEN_WIDTH - currentClip->w ) / 2;
-                gSpriteSheetTexture.yPos = ( SCREEN_HEIGHT - currentClip->h ) / 2;
-                */
-
-
-           //     textureRender(&gArrowTexture, NULL, degrees, NULL, flipType);
-
-                //Update screen
 
                 SDL_RenderPresent( gRenderer );
 
-                //Go to next frame
-                /*
-                ++frame;
-
-                //Cycle animation
-                if( frame / 4 >= WALKING_ANIMATION_FRAMES )
-                {
-                    frame = 0;
-                }
-                */
 
         }
-        SDL_DestroyTexture( gPressTexture.mTexture );
-        SDL_DestroyTexture( gUpTexture.mTexture );
-        SDL_DestroyTexture( gDownTexture.mTexture );
-        SDL_DestroyTexture( gLeftTexture.mTexture );
-        SDL_DestroyTexture( gRightTexture.mTexture );
-        Mix_FreeChunk( gScratch.gSound );
-        Mix_FreeChunk( gHigh.gSound );
-        Mix_FreeChunk( gMedium.gSound );
-        Mix_FreeChunk( gLow.gSound );
-        Mix_FreeMusic( gMusicStruct.gMusic );
-        gScratch.gSound = NULL;
-        gHigh.gSound = NULL;
-        gMedium.gSound = NULL;
-        gLow.gSound = NULL;
-        gMusicStruct.gMusic = NULL;
 
 
    }

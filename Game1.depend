@@ -1,5 +1,5 @@
 # depslib dependency file v1.0
-1562009102 source:c:\users\anton\desktop\code\game1\game1\main.c
+1562091488 source:c:\users\anton\desktop\code\game1\game1\main.c
 	<stdio.h>
 	<stdlib.h>
 	<SDL.h>
@@ -7,6 +7,7 @@
 	<SDL_mixer.h>
 	<SDL_ttf.h>
 	<stdbool.h>
+	<string.h>
 	"Game1.h"
 
 1541002144 c:\users\anton\downloads\sdl2-2.0.9\i686-w64-mingw32\include\sdl2\sdl.h
