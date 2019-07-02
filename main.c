@@ -62,6 +62,14 @@ SDL_Texture* newTexture = NULL;
 
 bool loadMediaGeometry();
 
+struct timerStruct
+{
+    Uint32 mStartTicks;
+    Uint32 mPausedTicks;
+    bool mPaused;
+    bool mStarted;
+};
+
 struct textureStruct
 {
     char *imagePath;
@@ -639,6 +647,67 @@ void handleEvent(struct buttonStruct *inputStruct, SDL_Event* e)
     }
 }
 
+void timerInit(struct timerStruct *inputStruct)
+{
+    inputStruct->mStarted = false;
+    inputStruct->mPaused = false;
+    inputStruct->mStartTicks = 0;
+    inputStruct->mPausedTicks = 0;
+}
+
+void timerStart(struct timerStruct *inputStruct)
+{
+    inputStruct->mStarted = true;
+    inputStruct->mPaused = false;
+    inputStruct->mStartTicks = SDL_GetTicks();
+    inputStruct->mPausedTicks = 0;
+}
+
+void timerStop(struct timerStruct *inputStruct)
+{
+    inputStruct->mStarted = false;
+    inputStruct->mPaused = false;
+    inputStruct->mStartTicks = 0;
+    inputStruct->mPausedTicks = 0;
+}
+
+void timerPause(struct timerStruct *inputStruct)
+{
+    if( inputStruct->mStarted && !inputStruct->mPaused )
+    {
+        inputStruct->mPaused = true;
+        inputStruct->mPausedTicks = SDL_GetTicks() - inputStruct->mStartTicks;
+        inputStruct->mStartTicks = 0;
+    }
+}
+
+void timerUnpause(struct timerStruct *inputStruct)
+{
+    if( inputStruct->mStarted && inputStruct->mPaused )
+    {
+        inputStruct->mPaused = false;
+        inputStruct->mPausedTicks = SDL_GetTicks() - inputStruct->mPausedTicks;
+        inputStruct->mPausedTicks = 0;
+    }
+}
+
+Uint32 getTicks(struct timerStruct *inputStruct)
+{
+    Uint32 time = 0;
+    if( inputStruct->mStarted )
+    {
+        if( inputStruct->mPaused)
+        {
+            time = inputStruct->mPausedTicks;
+        }
+        else
+            {
+                time = SDL_GetTicks() - inputStruct->mStartTicks;
+            }
+    }
+    return time;
+}
+
 
 
 
@@ -679,16 +748,35 @@ int main( int argc, char* args[] )
     }
     else
     {
-        struct ttfStruct gPromptTexture;
+        struct ttfStruct gStartPromptTexture;
         struct ttfStruct gTimeTexture;
+        struct ttfStruct gPausePromptTexture;
+        struct timerStruct gTimer;
 
-        gPromptTexture.imagePath = "22_timing/lazy.ttf";
-        gPromptTexture.xPos = 0;
-        gPromptTexture.yPos = 0;
-        gPromptTexture.textureText = "Press Enter to Reset Start Time.";
+
+        gTimer.mStartTicks = 0;
+        gTimer.mPausedTicks = 0;
+        gTimer.mPaused = false;
+        gTimer.mStarted = false;
+
+
+        gStartPromptTexture.imagePath = "22_timing/lazy.ttf";
+        gStartPromptTexture.xPos = 0;
+        gStartPromptTexture.yPos = 0;
+        gStartPromptTexture.textureText = "Press S to Start or Stop the Timer";
+
+        gPausePromptTexture.imagePath = "22_timing/lazy.ttf";
+        gPausePromptTexture.xPos = 0;
+        gPausePromptTexture.yPos = 0;
+        gPausePromptTexture.textureText = "Press P to Pause or Unpause the Timer";
+
         gTimeTexture.imagePath = "22_timing/lazy.ttf";
         gTimeTexture.textureText = "LMAO";
-        if( !loadMedia(&gPromptTexture) )
+        if( !loadMedia(&gStartPromptTexture) )
+        {
+            printf( "Failed to load media! \n" );
+        }
+        if( !loadMedia(&gPausePromptTexture) )
         {
             printf( "Failed to load media! \n" );
         }
@@ -696,7 +784,7 @@ int main( int argc, char* args[] )
         {
             printf( "Failed to load media! \n" );
         }
-
+        timerInit(&gTimer);
 /*
         gArrowTexture.xPos = ( SCREEN_WIDTH - gArrowTexture.mWidth ) / 2;
         gArrowTexture.yPos = ( SCREEN_HEIGHT - gArrowTexture.mHeight ) / 2;
@@ -715,10 +803,34 @@ int main( int argc, char* args[] )
                     quit = true;
                 }
                 //Reset start time on return keypress
-                else if( e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_RETURN )
-                {
-                    startTime = SDL_GetTicks();
-                }
+                else if( e.type == SDL_KEYDOWN )
+					{
+						//Start/stop
+						if( e.key.keysym.sym == SDLK_s )
+						{
+
+							if( gTimer.mStarted )
+							{
+								timerStop(&gTimer);
+							}
+							else
+							{
+								timerStart(&gTimer);
+							}
+						}
+						//Pause/unpause
+						else if( e.key.keysym.sym == SDLK_p )
+						{
+							if( gTimer.mStarted && gTimer.mPaused )
+							{
+								timerUnpause(&gTimer);
+							}
+							else
+							{
+								timerPause(&gTimer);
+							}
+						}
+					}
             }
 
                 //Set text to be rendered
@@ -728,9 +840,10 @@ int main( int argc, char* args[] )
                 // printf("LMffao \n");
 
 
-                strcpy(timeText, "Milliseconds since start time ");
+                strcpy(timeText, "Seconds since start time ");
                 // printf(timeText);
-                sprintf(timeBuffer, "%d", SDL_GetTicks() - startTime);
+                int convertedTime = ( getTicks(&gTimer) / 1000.0);
+                sprintf(timeBuffer, "%d", convertedTime  );
                 strcat(timeText, timeBuffer);
                 //printf(timeText);
 
@@ -738,12 +851,16 @@ int main( int argc, char* args[] )
                 //Clear screen
                 SDL_SetRenderDrawColor( gRenderer, 0xFF, 0xFF, 0xFF, 0xFF );
                 SDL_RenderClear( gRenderer );
-                gPromptTexture.xPos = (SCREEN_WIDTH - gPromptTexture.mWidth) / 2;
-                gPromptTexture.yPos = 0;
-                textureRenderttf(&gPromptTexture, NULL, degrees, NULL, flipType);
+                gStartPromptTexture.xPos = (SCREEN_WIDTH - gStartPromptTexture.mWidth) / 2;
+                gStartPromptTexture.yPos = 0;
+                textureRenderttf(&gStartPromptTexture, NULL, degrees, NULL, flipType);
 
-                gTimeTexture.xPos = (SCREEN_WIDTH - gPromptTexture.mWidth) / 2;
-                gTimeTexture.yPos = (SCREEN_HEIGHT - gPromptTexture.mHeight ) / 2;
+                gPausePromptTexture.xPos = (SCREEN_WIDTH - gStartPromptTexture.mWidth) / 2;
+                gPausePromptTexture.yPos = gStartPromptTexture.mHeight;
+                textureRenderttf(&gPausePromptTexture, NULL, degrees, NULL, flipType);
+
+                gTimeTexture.xPos = (SCREEN_WIDTH - gTimeTexture.mWidth) / 2;
+                gTimeTexture.yPos = (SCREEN_HEIGHT - gTimeTexture.mHeight ) / 2;
                 gTimeTexture.textureText = timeText;
                 if( !loadMedia(&gTimeTexture) )
                 {
