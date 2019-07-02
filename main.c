@@ -246,7 +246,7 @@ bool initRenderer()
         else
         {
             //Create renderer for window
-            gRenderer = SDL_CreateRenderer( gWindow, -1, SDL_RENDERER_ACCELERATED );
+            gRenderer = SDL_CreateRenderer( gWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC );
             if( gRenderer == NULL )
             {
                 printf( "Renderer could not be created! SDL Error: %s\n", SDL_GetError() );
@@ -752,6 +752,10 @@ int main( int argc, char* args[] )
         struct ttfStruct gTimeTexture;
         struct ttfStruct gPausePromptTexture;
         struct timerStruct gTimer;
+        struct timerStruct fpsTimer;
+        struct ttfStruct gfpsTexture;
+
+        int countedFrames = 0;
 
 
         gTimer.mStartTicks = 0;
@@ -765,6 +769,11 @@ int main( int argc, char* args[] )
         gStartPromptTexture.yPos = 0;
         gStartPromptTexture.textureText = "Press S to Start or Stop the Timer";
 
+        gfpsTexture.imagePath = "22_timing/lazy.ttf";
+        gfpsTexture.xPos = 0;
+        gfpsTexture.yPos = 0;
+        gfpsTexture.textureText = "Whatup";
+
         gPausePromptTexture.imagePath = "22_timing/lazy.ttf";
         gPausePromptTexture.xPos = 0;
         gPausePromptTexture.yPos = 0;
@@ -772,11 +781,7 @@ int main( int argc, char* args[] )
 
         gTimeTexture.imagePath = "22_timing/lazy.ttf";
         gTimeTexture.textureText = "LMAO";
-        if( !loadMedia(&gStartPromptTexture) )
-        {
-            printf( "Failed to load media! \n" );
-        }
-        if( !loadMedia(&gPausePromptTexture) )
+        if( !loadMedia(&gfpsTexture) )
         {
             printf( "Failed to load media! \n" );
         }
@@ -784,7 +789,8 @@ int main( int argc, char* args[] )
         {
             printf( "Failed to load media! \n" );
         }
-        timerInit(&gTimer);
+        timerInit(&fpsTimer);
+        timerStart(&fpsTimer);
 /*
         gArrowTexture.xPos = ( SCREEN_WIDTH - gArrowTexture.mWidth ) / 2;
         gArrowTexture.yPos = ( SCREEN_HEIGHT - gArrowTexture.mHeight ) / 2;
@@ -803,35 +809,12 @@ int main( int argc, char* args[] )
                     quit = true;
                 }
                 //Reset start time on return keypress
-                else if( e.type == SDL_KEYDOWN )
-					{
-						//Start/stop
-						if( e.key.keysym.sym == SDLK_s )
-						{
-
-							if( gTimer.mStarted )
-							{
-								timerStop(&gTimer);
-							}
-							else
-							{
-								timerStart(&gTimer);
-							}
-						}
-						//Pause/unpause
-						else if( e.key.keysym.sym == SDLK_p )
-						{
-							if( gTimer.mStarted && gTimer.mPaused )
-							{
-								timerUnpause(&gTimer);
-							}
-							else
-							{
-								timerPause(&gTimer);
-							}
-						}
-					}
             }
+                float avgFPS = countedFrames / ( getTicks(&fpsTimer) / 1000.f );
+                if( avgFPS > 2000000 )
+                {
+                    avgFPS = 0;
+                }
 
                 //Set text to be rendered
                 char timeText[100] = "";
@@ -840,10 +823,10 @@ int main( int argc, char* args[] )
                 // printf("LMffao \n");
 
 
-                strcpy(timeText, "Seconds since start time ");
+                strcpy(timeText, "FPS: ");
                 // printf(timeText);
-                int convertedTime = ( getTicks(&gTimer) / 1000.0);
-                sprintf(timeBuffer, "%d", convertedTime  );
+                //int convertedTime = ( getTicks(&gTimer) / 1000.0);
+                sprintf(timeBuffer, "%.0f", avgFPS  );
                 strcat(timeText, timeBuffer);
                 //printf(timeText);
 
@@ -851,27 +834,22 @@ int main( int argc, char* args[] )
                 //Clear screen
                 SDL_SetRenderDrawColor( gRenderer, 0xFF, 0xFF, 0xFF, 0xFF );
                 SDL_RenderClear( gRenderer );
-                gStartPromptTexture.xPos = (SCREEN_WIDTH - gStartPromptTexture.mWidth) / 2;
-                gStartPromptTexture.yPos = 0;
-                textureRenderttf(&gStartPromptTexture, NULL, degrees, NULL, flipType);
 
-                gPausePromptTexture.xPos = (SCREEN_WIDTH - gStartPromptTexture.mWidth) / 2;
-                gPausePromptTexture.yPos = gStartPromptTexture.mHeight;
-                textureRenderttf(&gPausePromptTexture, NULL, degrees, NULL, flipType);
+                gfpsTexture.xPos = (SCREEN_WIDTH - 1.5*gfpsTexture.mWidth ) ;
+                gfpsTexture.yPos = ( gfpsTexture.mHeight) ;
+                gfpsTexture.textureText = timeText;
 
-                gTimeTexture.xPos = (SCREEN_WIDTH - gTimeTexture.mWidth) / 2;
-                gTimeTexture.yPos = (SCREEN_HEIGHT - gTimeTexture.mHeight ) / 2;
-                gTimeTexture.textureText = timeText;
-                if( !loadMedia(&gTimeTexture) )
+                if( !loadMedia(&gfpsTexture) )
                 {
                     printf( "Failed to load media! \n" );
                 }
-                textureRenderttf(&gTimeTexture, NULL, degrees, NULL, flipType);
+                textureRenderttf(&gfpsTexture, NULL, degrees, NULL, flipType);
 
            //     textureRender(&gPromptTexture, NULL, degrees, NULL, flipType);
 
 
                 SDL_RenderPresent( gRenderer );
+                ++countedFrames;
 
 
         }
