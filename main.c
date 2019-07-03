@@ -61,7 +61,7 @@ char imagePathViewport[64] = "09_the_viewport/viewport.png";
 
 SDL_Texture* newTexture = NULL;
 
-
+bool checkCollision( SDL_Rect a, SDL_Rect b );
 bool loadMediaGeometry();
 
 struct timerStruct
@@ -118,6 +118,7 @@ struct dotStruct
     char *imagePath;
     SDL_Texture* mTexture;
     SDL_Color textColor;
+    SDL_Rect mCollider;
 };
 
 void initDot(struct dotStruct *inputStruct)
@@ -129,6 +130,8 @@ void initDot(struct dotStruct *inputStruct)
     inputStruct->mPosY = 0;
     inputStruct->mVelX = 0;
     inputStruct->mVelY = 0;
+    inputStruct->mCollider.w = inputStruct->DOT_WIDTH;
+    inputStruct->mCollider.h = inputStruct->DOT_HEIGHT;
 }
 
 void handleDotEvent(struct dotStruct *inputStruct, SDL_Event *e)
@@ -159,24 +162,73 @@ void handleDotEvent(struct dotStruct *inputStruct, SDL_Event *e)
     }
 }
 
-void moveDot(struct dotStruct *inputStruct)
+void moveDot(struct dotStruct *inputStruct, SDL_Rect *wall)
 {
     inputStruct->mPosX += inputStruct->mVelX;
+    inputStruct->mCollider.x = inputStruct->mPosX;
     //If the dot went too far to the left or right
-    if( ( inputStruct->mPosX < 0 ) || ( inputStruct->mPosX + inputStruct->DOT_WIDTH > SCREEN_WIDTH ) )
+    if( ( inputStruct->mPosX < 0 ) || ( inputStruct->mPosX + inputStruct->DOT_WIDTH > SCREEN_WIDTH ) || checkCollision(inputStruct->mCollider, *wall) )
     {
         //Move back
         inputStruct->mPosX -= inputStruct->mVelX;
+        inputStruct->mCollider.x = inputStruct->mPosX;
     }
         //Move the dot up or down
     inputStruct->mPosY += inputStruct->mVelY;
+    inputStruct->mCollider.y = inputStruct->mPosY;
 
     //If the dot went too far up or down
-    if( ( inputStruct->mPosY < 0 ) || ( inputStruct->mPosY + inputStruct->DOT_HEIGHT > SCREEN_HEIGHT ) )
+    if( ( inputStruct->mPosY < 0 ) || ( inputStruct->mPosY + inputStruct->DOT_HEIGHT > SCREEN_HEIGHT ) || checkCollision(inputStruct->mCollider, *wall) )
     {
         //Move back
         inputStruct->mPosY -= inputStruct->mVelY;
+        inputStruct->mCollider.y = inputStruct->mPosY;
     }
+}
+
+bool checkCollision( SDL_Rect a, SDL_Rect b )
+{
+    //The sides of the rectangles
+    int leftA, leftB;
+    int rightA, rightB;
+    int topA, topB;
+    int bottomA, bottomB;
+
+    //Calculate the sides of rect A
+    leftA = a.x;
+    rightA = a.x + a.w;
+    topA = a.y;
+    bottomA = a.y + a.h;
+
+    //Calculate the sides of rect B
+    leftB = b.x;
+    rightB = b.x + b.w;
+    topB = b.y;
+    bottomB = b.y + b.h;
+
+    //If any of the sides from A are outside of B
+    if( bottomA <= topB )
+    {
+        return false;
+    }
+
+    if( topA >= bottomB )
+    {
+        return false;
+    }
+
+    if( rightA <= leftB )
+    {
+        return false;
+    }
+
+    if( leftA >= rightB )
+    {
+        return false;
+    }
+
+    //If none of the sides from A are outside B
+    return true;
 }
 
 
@@ -929,6 +981,13 @@ int main( int argc, char* args[] )
         timerInit(&fpsTimer);
         timerStart(&fpsTimer);
 
+        //Set the wall
+        SDL_Rect wall;
+        wall.x = 300;
+        wall.y = 40;
+        wall.w = 40;
+        wall.h = 400;
+
 
 /*
         gArrowTexture.xPos = ( SCREEN_WIDTH - gArrowTexture.mWidth ) / 2;
@@ -952,7 +1011,7 @@ int main( int argc, char* args[] )
                 handleDotEvent(&gDotTexture, &e);
                 //Reset start time on return keypress
             }
-            moveDot(&gDotTexture);
+                moveDot(&gDotTexture, &wall);
                 float avgFPS = countedFrames / ( getTicks(&fpsTimer) / 1000.f );
                 if( avgFPS > 2000000 )
                 {
@@ -986,6 +1045,8 @@ int main( int argc, char* args[] )
                 {
                     printf( "Failed to load media! \n" );
                 }
+                SDL_SetRenderDrawColor( gRenderer, 0x00, 0x00, 0x00, 0xFF );
+                SDL_RenderDrawRect( gRenderer, &wall );
                 textureRenderttf(&gfpsTexture, NULL, degrees, NULL, flipType);
                 textureDotRender(&gDotTexture, NULL, degrees, NULL, flipType);
 
