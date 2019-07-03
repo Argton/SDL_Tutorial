@@ -13,6 +13,8 @@
 const int BUTTON_WIDTH = 300;
 const int BUTTON_HEIGHT = 200;
 const int TOTAL_BUTTONS = 4;
+const int SCREEN_FPS = 60;
+const int SCREEN_TICKS_PER_FRAME = 1000 / 60;
 
 enum LButtonSprite
 {
@@ -246,7 +248,7 @@ bool initRenderer()
         else
         {
             //Create renderer for window
-            gRenderer = SDL_CreateRenderer( gWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC );
+            gRenderer = SDL_CreateRenderer( gWindow, -1, SDL_RENDERER_ACCELERATED);
             if( gRenderer == NULL )
             {
                 printf( "Renderer could not be created! SDL Error: %s\n", SDL_GetError() );
@@ -753,6 +755,7 @@ int main( int argc, char* args[] )
         struct ttfStruct gPausePromptTexture;
         struct timerStruct gTimer;
         struct timerStruct fpsTimer;
+        struct timerStruct capTimer;
         struct ttfStruct gfpsTexture;
 
         int countedFrames = 0;
@@ -791,6 +794,8 @@ int main( int argc, char* args[] )
         }
         timerInit(&fpsTimer);
         timerStart(&fpsTimer);
+
+
 /*
         gArrowTexture.xPos = ( SCREEN_WIDTH - gArrowTexture.mWidth ) / 2;
         gArrowTexture.yPos = ( SCREEN_HEIGHT - gArrowTexture.mHeight ) / 2;
@@ -799,6 +804,8 @@ int main( int argc, char* args[] )
         //While application is running
         while( !quit )
         {
+            timerStart(&capTimer);
+
 
             //Handle events on queue
             while( SDL_PollEvent( &e ) != 0 )
@@ -850,12 +857,20 @@ int main( int argc, char* args[] )
 
                 SDL_RenderPresent( gRenderer );
                 ++countedFrames;
+                int frameTicks = getTicks(&capTimer);
+                if( frameTicks < SCREEN_TICKS_PER_FRAME )
+                {
+                    //Wait remaining time
+                    SDL_Delay( SCREEN_TICKS_PER_FRAME - frameTicks );
+                }
+            }
+
 
 
         }
 
 
-   }
+
 
         //Free resources and close SDL
         closeTexture();
