@@ -8,6 +8,85 @@
 #include <string.h>
 #include "Game1.h"
 
+// int n declaration of variable
+// int *p declaration of pointer called p
+// * gives data
+// & gives address
+// p = &n makes the pointer p point to the address of n
+// *p gives now the value of that which p points to, i.e. the value of n
+// int *p, int* p, int * p should be equivalent
+// void myFunction(int *n) {}
+// int r = 5;
+// myFunction(&r)
+
+// This means, send the address of r to the function. The function uses the value of this address
+
+
+/*
+    Do like this, fool
+
+    int *ptrMyVar;
+    int myValue = 5;
+    ptrMyVar = &myValue;
+
+    void myFunc(int *input)
+{
+    int output = *input; // input still is an address here
+    printf("Myfunc output: %d \n", output);
+}
+
+    myFunc(ptrMyVar);
+
+    Also:
+
+    struct myStruct
+{
+    char *myChar;
+};
+
+void myFunction(struct myStruct *inputStruct);
+void myFunction2(struct myStruct *inputStruct);
+
+int main()
+{
+    struct myStruct myStruct1;
+    myStruct1.myChar = "Holy sheeet";
+    struct myStruct *ptrMyStruct1;
+    ptrMyStruct1 = &myStruct1;
+
+    //printf("%s \n", myStruct1.myChar);
+    //printf("%s \n", ptrMyStruct1->myChar);
+
+    void myFunction3(char *inputChar)
+    {
+        printf("%s \n", inputChar);
+    }
+
+    void myFunction2(struct myStruct *inputStruct)
+    {
+        printf("%s \n", inputStruct->myChar);
+    }
+
+    void myFunction(struct myStruct *inputStruct)
+    {
+        struct myStruct *ptrMyStruct2;
+        ptrMyStruct2 = inputStruct;
+        myFunction2(ptrMyStruct2);
+        myFunction2(inputStruct);
+        myFunction3(inputStruct->myChar);
+        myFunction3(ptrMyStruct2->myChar);
+    }
+
+    // all 4 above give same output
+
+
+
+    myFunction(ptrMyStruct1);
+
+
+*/
+
+
 
 //Button constants
 const int BUTTON_WIDTH = 300;
@@ -15,6 +94,8 @@ const int BUTTON_HEIGHT = 200;
 const int TOTAL_BUTTONS = 4;
 const int SCREEN_FPS = 60;
 const int SCREEN_TICKS_PER_FRAME = 1000 / 60;
+
+
 
 enum LButtonSprite
 {
@@ -121,11 +202,31 @@ struct dotStruct
     SDL_Rect mCollider;
 };
 
+struct dotStructArray
+{
+    int DOT_WIDTH;
+    int DOT_HEIGHT;
+    int DOT_VEL;
+    int mPosX;
+    int mPosY;
+    int mVelX;
+    int mVelY;
+    char *imagePath;
+    SDL_Texture* mTexture;
+    SDL_Color textColor;
+    SDL_Rect mCollider[11];
+};
+
+bool checkCollisionArray( SDL_Rect *a, SDL_Rect *b );
+
+void shiftColliders(struct dotStructArray *inputStruct);
+
+
 void initDot(struct dotStruct *inputStruct)
 {
     inputStruct->DOT_WIDTH = 20;
     inputStruct->DOT_HEIGHT = 20;
-    inputStruct->DOT_VEL = 10;
+    inputStruct->DOT_VEL = 1;
     inputStruct->mPosX = 0;
     inputStruct->mPosY = 0;
     inputStruct->mVelX = 0;
@@ -134,7 +235,83 @@ void initDot(struct dotStruct *inputStruct)
     inputStruct->mCollider.h = inputStruct->DOT_HEIGHT;
 }
 
+void initDotArray(struct dotStructArray *inputStruct, int posX, int posY)
+{
+    inputStruct->DOT_WIDTH = 20;
+    inputStruct->DOT_HEIGHT = 20;
+    inputStruct->DOT_VEL = 10;
+    inputStruct->mPosX = posX;
+    inputStruct->mPosY = posY;
+    inputStruct->mVelX = 0;
+    inputStruct->mVelY = 0;
+
+    inputStruct->mCollider[ 0 ].w = 6;
+    inputStruct->mCollider[ 0 ].h = 1;
+
+    inputStruct->mCollider[ 1 ].w = 10;
+    inputStruct->mCollider[ 1 ].h = 1;
+
+    inputStruct->mCollider[ 2 ].w = 14;
+    inputStruct->mCollider[ 2 ].h = 1;
+
+    inputStruct->mCollider[ 3 ].w = 16;
+    inputStruct->mCollider[ 3 ].h = 2;
+
+    inputStruct->mCollider[ 4 ].w = 18;
+    inputStruct->mCollider[ 4 ].h = 2;
+
+    inputStruct->mCollider[ 5 ].w = 20;
+    inputStruct->mCollider[ 5 ].h = 6;
+
+    inputStruct->mCollider[ 6 ].w = 18;
+    inputStruct->mCollider[ 6 ].h = 2;
+
+    inputStruct->mCollider[ 7 ].w = 16;
+    inputStruct->mCollider[ 7 ].h = 2;
+
+    inputStruct->mCollider[ 8 ].w = 14;
+    inputStruct->mCollider[ 8 ].h = 1;
+
+    inputStruct->mCollider[ 9 ].w = 10;
+    inputStruct->mCollider[ 9 ].h = 1;
+
+    inputStruct->mCollider[ 10 ].w = 6;
+    inputStruct->mCollider[ 10 ].h = 1;
+    shiftColliders(inputStruct);
+}
+
+
+
+
 void handleDotEvent(struct dotStruct *inputStruct, SDL_Event *e)
+{
+//If a key was pressed
+    if( e->type == SDL_KEYDOWN && e->key.repeat == 0 )
+    {
+        //Adjust the velocity
+        switch( e->key.keysym.sym )
+        {
+            case SDLK_UP: inputStruct->mVelY -= inputStruct->DOT_VEL; break;
+            case SDLK_DOWN: inputStruct->mVelY += inputStruct->DOT_VEL; break;
+            case SDLK_LEFT: inputStruct->mVelX -= inputStruct->DOT_VEL; break;
+            case SDLK_RIGHT: inputStruct->mVelX += inputStruct->DOT_VEL; break;
+        }
+    }
+    //If a key was released
+    else if( e->type == SDL_KEYUP && e->key.repeat == 0 )
+    {
+        //Adjust the velocity
+        switch( e->key.keysym.sym )
+        {
+            case SDLK_UP: inputStruct->mVelY += inputStruct->DOT_VEL; break;
+            case SDLK_DOWN: inputStruct->mVelY -= inputStruct->DOT_VEL; break;
+            case SDLK_LEFT: inputStruct->mVelX += inputStruct->DOT_VEL; break;
+            case SDLK_RIGHT: inputStruct->mVelX -= inputStruct->DOT_VEL; break;
+        }
+    }
+}
+
+void handleDotEventArray(struct dotStructArray *inputStruct, SDL_Event *e)
 {
 //If a key was pressed
     if( e->type == SDL_KEYDOWN && e->key.repeat == 0 )
@@ -186,6 +363,73 @@ void moveDot(struct dotStruct *inputStruct, SDL_Rect *wall)
     }
 }
 
+void moveDotArray(struct dotStructArray *inputStruct, SDL_Rect *wall)
+{
+    inputStruct->mPosX += inputStruct->mVelX;
+
+    shiftColliders(inputStruct);
+
+    //inputStruct->mCollider.x = inputStruct->mPosX;
+    //If the dot went too far to the left or right
+    if( ( inputStruct->mPosX < 0 ) || ( inputStruct->mPosX + inputStruct->DOT_WIDTH > SCREEN_WIDTH ) || checkCollisionArray(inputStruct->mCollider, wall) )
+    {
+        //Move back
+        inputStruct->mPosX -= inputStruct->mVelX;
+        //Move back
+        printf("collision \n");
+      //  inputStruct->mCollider.x = inputStruct->mPosX;
+        shiftColliders(inputStruct);
+    }
+        //Move the dot up or down
+    inputStruct->mPosY += inputStruct->mVelY;
+    //inputStruct->mCollider.y = inputStruct->mPosY;
+    shiftColliders(inputStruct);
+
+    //If the dot went too far up or down
+    if( ( inputStruct->mPosY < 0 ) || ( inputStruct->mPosY + inputStruct->DOT_HEIGHT > SCREEN_HEIGHT ) || checkCollisionArray(inputStruct->mCollider, wall) )
+    {
+        //Move back
+        printf("collision \n");
+        inputStruct->mPosY -= inputStruct->mVelY;
+        //inputStruct->mCollider.y = inputStruct->mPosY;
+        shiftColliders(inputStruct);
+    }
+
+}
+
+void shiftColliders(struct dotStructArray *inputStruct)
+{
+    //int lengthOfArray = sizeof(*inputStruct->mCollider)/sizeof(inputStruct->mCollider[0]);
+    //The row offset
+   int lengthOfArray = 11;
+   int r = 0;
+    /*
+
+    for( int i = 0; i < 11; i++)
+    {
+        printf("i: %d, w: %d \n",i, inputStruct->mCollider[i].w);
+    }
+    */
+
+    //Go through the dot's collision boxes
+
+    for( int set = 0; set < lengthOfArray; set++ )
+    {
+        printf("%d \n", set);
+        //Center the collision box
+        inputStruct->mCollider[ set ].x = inputStruct->mPosX + ( inputStruct->DOT_WIDTH - inputStruct->mCollider[ set ].w ) / 2;
+
+        //Set the collision box at its row offset
+        inputStruct->mCollider[ set ].y = inputStruct->mPosY + r;
+
+        //Move the row offset down the height of the collision box
+        r += inputStruct->mCollider[ set ].h;
+    }
+
+
+}
+
+
 bool checkCollision( SDL_Rect a, SDL_Rect b )
 {
     //The sides of the rectangles
@@ -231,6 +475,44 @@ bool checkCollision( SDL_Rect a, SDL_Rect b )
     return true;
 }
 
+bool checkCollisionArray( SDL_Rect a[], SDL_Rect b[] )
+{
+    int lengthOfA;
+    int lengthOfB;
+    //The sides of the rectangles
+    int leftA, leftB;
+    int rightA, rightB;
+    int topA, topB;
+    int bottomA, bottomB;
+
+    lengthOfA = 11;
+    lengthOfB = 11;
+
+    for( int Abox = 0; Abox < lengthOfA; Abox++)
+    {
+        leftA = a[Abox].x;
+        rightA = a[Abox].x + a[Abox].w;
+        topA = a[Abox].y;
+        bottomA = a[Abox].y + a[Abox].h;
+        for( int Bbox = 0; Bbox < lengthOfB; Bbox++)
+        {
+            leftB = b[Bbox].x;
+            rightB = b[Bbox].x + b[Bbox].w;
+            topB = b[Bbox].y;
+            bottomB = b[Bbox].y + b[Bbox].h;
+
+            if( ( ( bottomA <= topB ) || ( topA >= bottomB ) || ( rightA <= leftB ) || ( leftA >= rightB ) ) == false )
+            {
+                //A collision is detected
+                return true;
+            }
+        }
+    }
+    //If neither set of collision boxes touched
+
+
+    return false;
+}
 
 struct musicStruct
 {
@@ -653,8 +935,8 @@ bool LTexture(struct textureStruct *structinput)
 bool LDotTexture(struct dotStruct *structinput)
 {
 
-    mTexture = NULL;
-
+    structinput->mTexture = NULL;
+    newTexture = NULL;
     SDL_Surface* loadedSurface = IMG_Load( structinput->imagePath );
     if( loadedSurface == NULL )
     {
@@ -680,10 +962,51 @@ bool LDotTexture(struct dotStruct *structinput)
         //Get rid of old loaded surface
         SDL_FreeSurface( loadedSurface );
     }
-
+    loadedSurface = NULL;
     //Return success
     structinput->mTexture = newTexture;
     return newTexture != NULL;
+}
+
+bool LDotTextureArray(struct dotStructArray *structinput)
+{
+
+    structinput->mTexture = NULL;
+    SDL_Surface* loadedSurface = IMG_Load( structinput->imagePath ); // crashes here if loading two different structs
+
+
+    if( loadedSurface == NULL )
+    {
+        printf( "Unable to load image %s! SDL_image Error: %s\n", structinput->imagePath, IMG_GetError() );
+    }
+    else
+    {
+        //Color key image
+        SDL_SetColorKey( loadedSurface, SDL_TRUE, SDL_MapRGB( loadedSurface->format, 0, 0xFF, 0xFF ) );
+        //Create texture from surface pixels
+        newTexture = SDL_CreateTextureFromSurface( gRenderer, loadedSurface );
+        if( newTexture == NULL )
+        {
+            printf( "Unable to create texture from %s! SDL Error: %s\n", structinput->imagePath, SDL_GetError() );
+        }
+        else
+        {
+            //Get image dimensions
+            structinput->DOT_WIDTH = loadedSurface->w;
+            structinput->DOT_HEIGHT = loadedSurface->h;
+        }
+
+
+        //Get rid of old loaded surface
+        SDL_FreeSurface( loadedSurface );
+        loadedSurface = NULL;
+
+    }
+
+    //Return success
+    structinput->mTexture = newTexture;
+    newTexture = NULL;
+    return structinput->mTexture != NULL;
 }
 
 void textureRenderttf(struct ttfStruct *structinput, SDL_Rect* clip, double angle, SDL_Point* center, SDL_RendererFlip flip)
@@ -720,6 +1043,22 @@ void textureRender(struct textureStruct *structinput, SDL_Rect* clip, double ang
 }
 
 void textureDotRender(struct dotStruct *structinput, SDL_Rect* clip, double angle, SDL_Point* center, SDL_RendererFlip flip)
+{
+    //Set rendering space and render to screen
+    SDL_Rect renderQuad = { structinput->mPosX, structinput->mPosY, structinput->DOT_WIDTH, structinput->DOT_HEIGHT };
+
+    //Set clip rendering dimensions
+    if( clip != NULL )
+    {
+        renderQuad.w = clip->w;
+        renderQuad.h = clip->h;
+    }
+    //Render to screen
+    //SDL_RenderCopy( gRenderer, structinput->mTexture, clip, &renderQuad );
+    SDL_RenderCopyEx( gRenderer, structinput->mTexture, clip, &renderQuad, angle, center, flip );
+}
+
+void textureDotRenderArray(struct dotStructArray *structinput, SDL_Rect* clip, double angle, SDL_Point* center, SDL_RendererFlip flip)
 {
     //Set rendering space and render to screen
     SDL_Rect renderQuad = { structinput->mPosX, structinput->mPosY, structinput->DOT_WIDTH, structinput->DOT_HEIGHT };
@@ -897,23 +1236,23 @@ int main( int argc, char* args[] )
     //Main loop flag
     bool quit = false;
 
-    Uint8 r = 255;
-    Uint8 g = 255;
-    Uint8 b = 255;
+   // Uint8 r = 255;
+    //Uint8 g = 255;
+    //Uint8 b = 255;
 
     //Event handler
     SDL_Event e;
 
     //Modulation component
-    Uint8 a = 255;
+    //Uint8 a = 255;
 
-    int frame = 0;
+  //  int frame = 0;
 
     //Set text color as black
-    SDL_Color textColor = { 0, 0, 0, 255 };
+ //   SDL_Color textColor = { 0, 0, 0, 255 };
 
     //Current time start time
-    Uint32 startTime = 0;
+  //  Uint32 startTime = 0;
 
     //Angle of rotation
     double degrees = 0;
@@ -928,41 +1267,65 @@ int main( int argc, char* args[] )
     }
     else
     {
-        struct ttfStruct gStartPromptTexture;
+       // struct ttfStruct gStartPromptTexture;
         struct ttfStruct gTimeTexture;
-        struct ttfStruct gPausePromptTexture;
-        struct timerStruct gTimer;
+      //  struct ttfStruct gPausePromptTexture;
+    //    struct timerStruct gTimer;
         struct timerStruct fpsTimer;
         struct timerStruct capTimer;
         struct ttfStruct gfpsTexture;
-        struct dotStruct gDotTexture;
 
-        gDotTexture.imagePath = "26_motion/dot.bmp";
-        initDot(&gDotTexture);
+    //    struct dotStruct gDotTexture;
+        struct dotStructArray gDotTextureArray;
+        struct dotStructArray gDotTextureArray2;
 
+
+    /*    myGodDangStruct.arg[1] = 1;
+        //oaoao.mCollider[0].w = 1;
+        //oaoao.mCollider.w = 1 ;
+
+        struct dotStruct *dotStructArray;
+        int N = 10;
+        dotStructArray = malloc( N * sizeof( *dotStructArray) );
+
+        dotStructArray[0].mPosX = 0;
+        dotStructArray[3].mPosX = 0;
+        */
+
+
+ //      gDotTexture.imagePath = "26_motion/dot.bmp";
+        gDotTextureArray.imagePath = "26_motion/dot.bmp";
+        gDotTextureArray2.imagePath = "26_motion/dot.bmp";
+
+     //   initDot(&gDotTexture);
+        initDotArray(&gDotTextureArray, 50, 0);
+        initDotArray(&gDotTextureArray2, SCREEN_WIDTH / 4, SCREEN_HEIGHT / 4);
         int countedFrames = 0;
 
 
-        gTimer.mStartTicks = 0;
+    /*    gTimer.mStartTicks = 0;
         gTimer.mPausedTicks = 0;
         gTimer.mPaused = false;
         gTimer.mStarted = false;
+        */
 
 
-        gStartPromptTexture.imagePath = "22_timing/lazy.ttf";
+      /*  gStartPromptTexture.imagePath = "22_timing/lazy.ttf";
         gStartPromptTexture.xPos = 0;
         gStartPromptTexture.yPos = 0;
         gStartPromptTexture.textureText = "Press S to Start or Stop the Timer";
+        */
 
         gfpsTexture.imagePath = "22_timing/lazy.ttf";
         gfpsTexture.xPos = 0;
         gfpsTexture.yPos = 0;
         gfpsTexture.textureText = "Whatup";
 
-        gPausePromptTexture.imagePath = "22_timing/lazy.ttf";
+   /*     gPausePromptTexture.imagePath = "22_timing/lazy.ttf";
         gPausePromptTexture.xPos = 0;
         gPausePromptTexture.yPos = 0;
         gPausePromptTexture.textureText = "Press P to Pause or Unpause the Timer";
+        */
 
         gTimeTexture.imagePath = "22_timing/lazy.ttf";
         gTimeTexture.textureText = "LMAO";
@@ -970,23 +1333,34 @@ int main( int argc, char* args[] )
         {
             printf( "Failed to load media! \n" );
         }
+
         if( !loadMedia(&gTimeTexture) )
         {
             printf( "Failed to load media! \n" );
         }
-        if( !LDotTexture(&gDotTexture) )
+        if( !LDotTextureArray(&gDotTextureArray) )
         {
             printf( "Failed to load media! \n" );
         }
+        gDotTextureArray2.mTexture = gDotTextureArray.mTexture;
+        gDotTextureArray2.DOT_WIDTH = gDotTextureArray.DOT_WIDTH;
+        gDotTextureArray2.DOT_HEIGHT = gDotTextureArray.DOT_HEIGHT;
+   /*     if( !LDotTextureArray(&gDotTextureArray2) )
+        {
+            printf( "Failed to load media! \n" );
+        }
+        */
+
         timerInit(&fpsTimer);
         timerStart(&fpsTimer);
 
         //Set the wall
-        SDL_Rect wall;
+  /*      SDL_Rect wall;
         wall.x = 300;
         wall.y = 40;
         wall.w = 40;
         wall.h = 400;
+        */
 
 
 /*
@@ -1008,10 +1382,11 @@ int main( int argc, char* args[] )
                 {
                     quit = true;
                 }
-                handleDotEvent(&gDotTexture, &e);
+               handleDotEventArray(&gDotTextureArray, &e);
                 //Reset start time on return keypress
             }
-                moveDot(&gDotTexture, &wall);
+              moveDotArray(&gDotTextureArray, gDotTextureArray2.mCollider);
+
                 float avgFPS = countedFrames / ( getTicks(&fpsTimer) / 1000.f );
                 if( avgFPS > 2000000 )
                 {
@@ -1046,10 +1421,11 @@ int main( int argc, char* args[] )
                     printf( "Failed to load media! \n" );
                 }
                 SDL_SetRenderDrawColor( gRenderer, 0x00, 0x00, 0x00, 0xFF );
-                SDL_RenderDrawRect( gRenderer, &wall );
+               // SDL_RenderDrawRect( gRenderer, &wall );
                 textureRenderttf(&gfpsTexture, NULL, degrees, NULL, flipType);
-                textureDotRender(&gDotTexture, NULL, degrees, NULL, flipType);
-
+             //   textureDotRender(&gDotTexture, NULL, degrees, NULL, flipType);
+               textureDotRenderArray(&gDotTextureArray, NULL, degrees, NULL, flipType);
+               textureDotRenderArray(&gDotTextureArray2, NULL, degrees, NULL, flipType);
            //     textureRender(&gPromptTexture, NULL, degrees, NULL, flipType);
 
 
@@ -1064,15 +1440,19 @@ int main( int argc, char* args[] )
             }
 
 
-        gTexture = gDotTexture.mTexture;
+        gTexture = gDotTextureArray.mTexture;
+        closeTexture();
+        close();
+        gTexture = gDotTextureArray2.mTexture;
+        closeTexture();
+        close();
         }
 
 
 
 
         //Free resources and close SDL
-        closeTexture();
-        close();
+
         return 0;
 }
 
