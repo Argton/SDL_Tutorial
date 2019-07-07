@@ -1107,10 +1107,10 @@ void textureRenderttf(struct ttfStruct *structinput, SDL_Rect* clip, double angl
     SDL_RenderCopyEx( gRenderer, structinput->mTexture, clip, &renderQuad, angle, center, flip );
 }
 
-void textureRender(struct textureStruct *structinput, SDL_Rect* clip, double angle, SDL_Point* center, SDL_RendererFlip flip)
+void textureRender(struct textureStruct *structinput, SDL_Rect* clip, double angle, SDL_Point* center, SDL_RendererFlip flip, int posX, int posY)
 {
     //Set rendering space and render to screen
-    SDL_Rect renderQuad = { structinput->xPos, structinput->yPos, structinput->mWidth, structinput->mHeight };
+    SDL_Rect renderQuad = { structinput->xPos+ posX, structinput->yPos+ posY, structinput->mWidth, structinput->mHeight };
 
     //Set clip rendering dimensions
     if( clip != NULL )
@@ -1291,6 +1291,29 @@ void timerUnpause(struct timerStruct *inputStruct)
     }
 }
 
+void moveStruct(struct dotStructArray *inputStruct)
+{
+    //Move the dot left or right
+    inputStruct->mPosX += inputStruct->mVelX;
+
+    //If the dot went too far to the left or right
+    if( ( inputStruct->mPosX < 0 ) || ( inputStruct->mPosX + inputStruct->DOT_WIDTH > LEVEL_WIDTH ) )
+    {
+        //Move back
+        inputStruct->mPosX -= inputStruct->mVelX;
+    }
+
+    //Move the dot up or down
+    inputStruct->mPosY += inputStruct->mVelY;
+
+    //If the dot went too far up or down
+    if( ( inputStruct->mPosY < 0 ) || ( inputStruct->mPosY + inputStruct->DOT_HEIGHT > LEVEL_HEIGHT ) )
+    {
+        //Move back
+        inputStruct->mPosY -= inputStruct->mVelY;
+    }
+}
+
 Uint32 getTicks(struct timerStruct *inputStruct)
 {
     Uint32 time = 0;
@@ -1333,14 +1356,16 @@ int main( int argc, char* args[] )
         struct ttfStruct gfpsTexture;
         struct dotStructArray gDotTextureArray;
         struct dotStructArray gDotTextureArray2;
+        struct textureStruct gBGTexture;
 
-        gDotTextureArray.imagePath = "26_motion/dot.bmp";
-        gDotTextureArray2.imagePath = "26_motion/dot.bmp";
+        gBGTexture.imagePath = "30_scrolling/bg.png";
+        gDotTextureArray.imagePath = "30_scrolling/dot.bmp";
+      //  gDotTextureArray2.imagePath = "30_scrolling/dot.bmp";
 
         initDotArray(&gDotTextureArray, 50, 0);
         gDotTextureArray.mPosX = gDotTextureArray.DOT_WIDTH / 2;
         gDotTextureArray.mPosX = gDotTextureArray.DOT_HEIGHT / 2;
-        initDotArray(&gDotTextureArray2, SCREEN_WIDTH / 4, SCREEN_HEIGHT / 4);
+      //  initDotArray(&gDotTextureArray2, SCREEN_WIDTH / 4, SCREEN_HEIGHT / 4);
         int countedFrames = 0;
 
 
@@ -1364,13 +1389,20 @@ int main( int argc, char* args[] )
         {
             printf( "Failed to load media! \n" );
         }
-        gDotTextureArray2.mTexture = gDotTextureArray.mTexture;
-        gDotTextureArray2.DOT_WIDTH = gDotTextureArray.DOT_WIDTH;
-        gDotTextureArray2.DOT_HEIGHT = gDotTextureArray.DOT_HEIGHT;
-       if( !LDotTextureArray(&gDotTextureArray2) )
+        if( !LTexture(&gBGTexture) )
         {
             printf( "Failed to load media! \n" );
         }
+    //    gDotTextureArray2.mTexture = gDotTextureArray.mTexture;
+    //    gDotTextureArray2.DOT_WIDTH = gDotTextureArray.DOT_WIDTH;
+    //    gDotTextureArray2.DOT_HEIGHT = gDotTextureArray.DOT_HEIGHT;
+        gBGTexture.xPos = 0;
+        gBGTexture.yPos = 0;
+    /*   if( !LDotTextureArray(&gDotTextureArray2) )
+        {
+            printf( "Failed to load media! \n" );
+        }
+        */
 
 
         timerInit(&fpsTimer);
@@ -1383,6 +1415,7 @@ int main( int argc, char* args[] )
         wall.w = 40;
         wall.h = 400;
 
+        SDL_Rect camera = { 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT };
 
         //While application is running
         while( !quit )
@@ -1402,8 +1435,9 @@ int main( int argc, char* args[] )
 
             }
 
-                moveDotArraySquareCircle(&gDotTextureArray, &gDotTextureArray2.mColliders, &wall);
-
+               // moveDotArraySquareCircle(&gDotTextureArray, &gDotTextureArray2.mColliders, &wall);
+                //moveDotArray(&gDotTextureArray, &wall);
+                moveStruct(&gDotTextureArray);
                 float avgFPS = countedFrames / ( getTicks(&fpsTimer) / 1000.f );
                 if( avgFPS > 2000000 )
                 {
@@ -1414,7 +1448,26 @@ int main( int argc, char* args[] )
                 char timeText[100] = "";
                 char timeBuffer[100] = "";
 
+                camera.x = ( gDotTextureArray.mPosX + gDotTextureArray.DOT_WIDTH / 2 ) - SCREEN_WIDTH / 2;
+                camera.y = ( gDotTextureArray.mPosY + gDotTextureArray.DOT_HEIGHT / 2 ) - SCREEN_HEIGHT / 2;
 
+                //Keep the camera in bounds
+                if( camera.x < 0 )
+                {
+                    camera.x = 0;
+                }
+                if( camera.y < 0 )
+                {
+                    camera.y = 0;
+                }
+                if( camera.x > LEVEL_WIDTH - camera.w )
+                {
+                    camera.x = LEVEL_WIDTH - camera.w;
+                }
+                if( camera.y > LEVEL_HEIGHT - camera.h )
+                {
+                    camera.y = LEVEL_HEIGHT - camera.h;
+                }
 
                 strcpy(timeText, "FPS: ");
                 sprintf(timeBuffer, "%.0f", avgFPS  );
@@ -1433,11 +1486,12 @@ int main( int argc, char* args[] )
                     printf( "Failed to load media! \n" );
                 }
                 SDL_SetRenderDrawColor( gRenderer, 0x00, 0x00, 0x00, 0xFF );
-                SDL_RenderDrawRect( gRenderer, &wall );
+              //  SDL_RenderDrawRect( gRenderer, &wall );
+                textureRender(&gBGTexture, &camera, degrees, NULL, flipType, 0 , 0);
                 textureRenderttf(&gfpsTexture, NULL, degrees, NULL, flipType);
+                textureDotRenderArray(&gDotTextureArray, NULL, degrees, NULL, flipType, -camera.x, -camera.y);
+               // textureDotRenderArray(&gDotTextureArray2, NULL, degrees, NULL, flipType, -gDotTextureArray2.mColliders.r, -gDotTextureArray2.mColliders.r);
 
-                textureDotRenderArray(&gDotTextureArray, NULL, degrees, NULL, flipType, -gDotTextureArray.mColliders.r, -gDotTextureArray.mColliders.r);
-                textureDotRenderArray(&gDotTextureArray2, NULL, degrees, NULL, flipType, -gDotTextureArray2.mColliders.r, -gDotTextureArray2.mColliders.r);
 
 
                 SDL_RenderPresent( gRenderer );
