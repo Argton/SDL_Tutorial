@@ -1297,7 +1297,7 @@ void moveStruct(struct dotStructArray *inputStruct)
     inputStruct->mPosX += inputStruct->mVelX;
 
     //If the dot went too far to the left or right
-    if( ( inputStruct->mPosX < 0 ) || ( inputStruct->mPosX + inputStruct->DOT_WIDTH > LEVEL_WIDTH ) )
+    if( ( inputStruct->mPosX < 0 ) || ( inputStruct->mPosX + inputStruct->DOT_WIDTH > SCREEN_WIDTH ) )
     {
         //Move back
         inputStruct->mPosX -= inputStruct->mVelX;
@@ -1307,7 +1307,7 @@ void moveStruct(struct dotStructArray *inputStruct)
     inputStruct->mPosY += inputStruct->mVelY;
 
     //If the dot went too far up or down
-    if( ( inputStruct->mPosY < 0 ) || ( inputStruct->mPosY + inputStruct->DOT_HEIGHT > LEVEL_HEIGHT ) )
+    if( ( inputStruct->mPosY < 0 ) || ( inputStruct->mPosY + inputStruct->DOT_HEIGHT > SCREEN_HEIGHT ) )
     {
         //Move back
         inputStruct->mPosY -= inputStruct->mVelY;
@@ -1358,8 +1358,8 @@ int main( int argc, char* args[] )
         struct dotStructArray gDotTextureArray2;
         struct textureStruct gBGTexture;
 
-        gBGTexture.imagePath = "30_scrolling/bg.png";
-        gDotTextureArray.imagePath = "30_scrolling/dot.bmp";
+        gBGTexture.imagePath = "31_scrolling_backgrounds/bg.png";
+        gDotTextureArray.imagePath = "31_scrolling_backgrounds/dot.bmp";
       //  gDotTextureArray2.imagePath = "30_scrolling/dot.bmp";
 
         initDotArray(&gDotTextureArray, 50, 0);
@@ -1409,14 +1409,15 @@ int main( int argc, char* args[] )
         timerStart(&fpsTimer);
 
         //Set the wall
-        SDL_Rect wall;
+     /*   SDL_Rect wall;
         wall.x = 300;
         wall.y = 40;
         wall.w = 40;
         wall.h = 400;
+        */
 
         SDL_Rect camera = { 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT };
-
+        int scrollingOffset = 0;
         //While application is running
         while( !quit )
         {
@@ -1434,14 +1435,23 @@ int main( int argc, char* args[] )
                handleDotEventArray(&gDotTextureArray, &e);
 
             }
+                //The background scrolling offset
 
                // moveDotArraySquareCircle(&gDotTextureArray, &gDotTextureArray2.mColliders, &wall);
                 //moveDotArray(&gDotTextureArray, &wall);
                 moveStruct(&gDotTextureArray);
+
                 float avgFPS = countedFrames / ( getTicks(&fpsTimer) / 1000.f );
                 if( avgFPS > 2000000 )
                 {
                     avgFPS = 0;
+                }
+
+                //Scroll background
+                --scrollingOffset;
+                if( scrollingOffset < -gBGTexture.mWidth )
+                {
+                    scrollingOffset = 0;
                 }
 
                 //Set text to be rendered h
@@ -1487,9 +1497,11 @@ int main( int argc, char* args[] )
                 }
                 SDL_SetRenderDrawColor( gRenderer, 0x00, 0x00, 0x00, 0xFF );
               //  SDL_RenderDrawRect( gRenderer, &wall );
-                textureRender(&gBGTexture, &camera, degrees, NULL, flipType, 0 , 0);
+                //textureRender(&gBGTexture, &camera, degrees, NULL, flipType, 0 , 0);
+                textureRender(&gBGTexture, NULL, degrees, NULL, flipType, scrollingOffset, 0);
+                textureRender(&gBGTexture, NULL, degrees, NULL, flipType, scrollingOffset + gBGTexture.mWidth, 0);
+                textureDotRenderArray(&gDotTextureArray, NULL, degrees, NULL, flipType, 0, 0);
                 textureRenderttf(&gfpsTexture, NULL, degrees, NULL, flipType);
-                textureDotRenderArray(&gDotTextureArray, NULL, degrees, NULL, flipType, -camera.x, -camera.y);
                // textureDotRenderArray(&gDotTextureArray2, NULL, degrees, NULL, flipType, -gDotTextureArray2.mColliders.r, -gDotTextureArray2.mColliders.r);
 
 
