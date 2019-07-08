@@ -95,6 +95,7 @@ const int TOTAL_BUTTONS = 4;
 const int SCREEN_FPS = 60;
 const int SCREEN_TICKS_PER_FRAME = 1000 / 60;
 
+SDL_Color textColor = { 0, 0, 0, 0xFF };
 
 
 enum LButtonSprite
@@ -1354,6 +1355,8 @@ int main( int argc, char* args[] )
         struct timerStruct fpsTimer;
         struct timerStruct capTimer;
         struct ttfStruct gfpsTexture;
+        struct ttfStruct gInputTextTexture;
+        struct ttfStruct gPromptTextTexture;
         struct dotStructArray gDotTextureArray;
         struct dotStructArray gDotTextureArray2;
         struct textureStruct gBGTexture;
@@ -1367,16 +1370,35 @@ int main( int argc, char* args[] )
         gDotTextureArray.mPosX = gDotTextureArray.DOT_HEIGHT / 2;
       //  initDotArray(&gDotTextureArray2, SCREEN_WIDTH / 4, SCREEN_HEIGHT / 4);
         int countedFrames = 0;
+        char *inputText = "lmao";
 
+       // printf("Length of String is %d\n", strlen(inputText));
 
         gfpsTexture.imagePath = "22_timing/lazy.ttf";
+        gPromptTextTexture.imagePath = "22_timing/lazy.ttf";
         gfpsTexture.xPos = 0;
         gfpsTexture.yPos = 0;
+        gInputTextTexture.xPos = 0;
+        gInputTextTexture.yPos = 0;
         gfpsTexture.textureText = "Whatup";
+        gPromptTextTexture.xPos = 0;
+        gPromptTextTexture.yPos = 0;
+        gPromptTextTexture.textureText = "Whatup";
+
 
         gTimeTexture.imagePath = "22_timing/lazy.ttf";
         gTimeTexture.textureText = "LMAO";
+        gInputTextTexture.imagePath = "22_timing/lazy.ttf";
+        gInputTextTexture.textureText = inputText;
         if( !loadMedia(&gfpsTexture) )
+        {
+            printf( "Failed to load media! \n" );
+        }
+        if( !loadMedia(&gInputTextTexture) )
+        {
+            printf( "Failed to load media! \n" );
+        }
+        if( !loadMedia(&gPromptTextTexture) )
         {
             printf( "Failed to load media! \n" );
         }
@@ -1404,7 +1426,6 @@ int main( int argc, char* args[] )
         }
         */
 
-
         timerInit(&fpsTimer);
         timerStart(&fpsTimer);
 
@@ -1419,11 +1440,11 @@ int main( int argc, char* args[] )
         SDL_Rect camera = { 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT };
         int scrollingOffset = 0;
         //While application is running
+        SDL_StartTextInput();
         while( !quit )
         {
             timerStart(&capTimer);
-
-
+            bool renderText = false;
             //Handle events on queue
             while( SDL_PollEvent( &e ) != 0 )
             {
@@ -1432,9 +1453,75 @@ int main( int argc, char* args[] )
                 {
                     quit = true;
                 }
-               handleDotEventArray(&gDotTextureArray, &e);
+                 else if( e.type == SDL_KEYDOWN )
+                    {
+                        //Handle backspace
+                        if( e.key.keysym.sym == SDLK_BACKSPACE && strlen(inputText) > 0 )
+                        {
+                            //lop off character
+                            int index = strlen(inputText) - 1;
+                            char* buffer = malloc(strlen(inputText) + 1);
+                            if(buffer != NULL)
+                            {
+                                strcpy(buffer, inputText);
+                                buffer[ index ] = '\0';
+                            }
+                            inputText = malloc(strlen(buffer));
+                            strcpy(inputText, buffer);
+                            renderText = true;
+                        }
+                        //Handle copy
+                        else if( e.key.keysym.sym == SDLK_c && SDL_GetModState() & KMOD_CTRL )
+                        {
+                            SDL_SetClipboardText( inputText );
+                        }
+                        //Handle paste
+                        else if( e.key.keysym.sym == SDLK_v && SDL_GetModState() & KMOD_CTRL )
+                        {
+                            inputText = SDL_GetClipboardText();
+                            renderText = true;
+                        }
+                    }
+                    else if( e.type == SDL_TEXTINPUT )
+                    {
+                        //Not copy or pasting
+                        if( !( SDL_GetModState() & KMOD_CTRL && ( e.text.text[ 0 ] == 'c' || e.text.text[ 0 ] == 'C' || e.text.text[ 0 ] == 'v' || e.text.text[ 0 ] == 'V' ) ) )
+                        {
+                            //Append character
+                            char* buffer = malloc(strlen(inputText) + 2);
+                            if(buffer != NULL)
+                            {
+                                strcpy(buffer, inputText);
+                                strcat(buffer, e.text.text);
 
-            }
+                            }
+                            inputText = malloc(strlen(buffer) + 1);
+                            strcpy(inputText, buffer);
+                            renderText = true;
+                        }
+                    }
+                }
+                                //Rerender text if needed
+                if( renderText )
+                {
+                    //Text is not empty
+                    if( strcmp(inputText, "") != 0)
+                    {
+                        //Render new text
+                        gInputTextTexture.textureText = inputText;
+                        loadFromRenderedText(&gInputTextTexture, textColor);
+                    }
+                    //Text is empty
+                    else
+                    {
+                        //Render space texture
+                        gInputTextTexture.textureText = " ";
+                        loadFromRenderedText(&gInputTextTexture, textColor);
+                    }
+                }
+               //handleDotEventArray(&gDotTextureArray, &e);
+
+
                 //The background scrolling offset
 
                // moveDotArraySquareCircle(&gDotTextureArray, &gDotTextureArray2.mColliders, &wall);
@@ -1498,10 +1585,17 @@ int main( int argc, char* args[] )
                 SDL_SetRenderDrawColor( gRenderer, 0x00, 0x00, 0x00, 0xFF );
               //  SDL_RenderDrawRect( gRenderer, &wall );
                 //textureRender(&gBGTexture, &camera, degrees, NULL, flipType, 0 , 0);
-                textureRender(&gBGTexture, NULL, degrees, NULL, flipType, scrollingOffset, 0);
-                textureRender(&gBGTexture, NULL, degrees, NULL, flipType, scrollingOffset + gBGTexture.mWidth, 0);
-                textureDotRenderArray(&gDotTextureArray, NULL, degrees, NULL, flipType, 0, 0);
+            //    textureRender(&gBGTexture, NULL, degrees, NULL, flipType, scrollingOffset, 0);
+            //    textureRender(&gBGTexture, NULL, degrees, NULL, flipType, scrollingOffset + gBGTexture.mWidth, 0);
+             //   textureDotRenderArray(&gDotTextureArray, NULL, degrees, NULL, flipType, 0, 0);
                 textureRenderttf(&gfpsTexture, NULL, degrees, NULL, flipType);
+                gPromptTextTexture.xPos = (SCREEN_WIDTH - gPromptTextTexture.mWidth) / 2;
+                gPromptTextTexture.yPos = 0;
+                textureRenderttf(&gPromptTextTexture, NULL, degrees, NULL, flipType);
+
+                gInputTextTexture.xPos = (SCREEN_WIDTH - gInputTextTexture.mWidth) / 2;
+                gInputTextTexture.yPos = gPromptTextTexture.mHeight;
+                textureRenderttf(&gInputTextTexture, NULL, degrees, NULL, flipType);
                // textureDotRenderArray(&gDotTextureArray2, NULL, degrees, NULL, flipType, -gDotTextureArray2.mColliders.r, -gDotTextureArray2.mColliders.r);
 
 
@@ -1516,7 +1610,7 @@ int main( int argc, char* args[] )
                 }
             }
 
-
+        SDL_StopTextInput();
         gTexture = gDotTextureArray.mTexture;
         closeTexture();
         close();
