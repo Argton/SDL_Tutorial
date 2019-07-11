@@ -95,6 +95,57 @@ const int TOTAL_BUTTONS = 4;
 const int SCREEN_FPS = 60;
 const int SCREEN_TICKS_PER_FRAME = 1000 / 60;
 
+
+
+#define TOTAL_DATA 10
+Sint32 gData[ TOTAL_DATA ];
+
+bool SDL_RWopsWrapper(char *path)
+{
+    bool success = false;
+    SDL_RWops* file = SDL_RWFromFile( path , "r+b" );
+    if( file == NULL )
+    {
+    printf( "Warning: Unable to open file! SDL Error: %s\n", SDL_GetError() );
+    //Create file for writing
+    file = SDL_RWFromFile( path , "w+b" );
+    if( file != NULL )
+        {
+            printf( "New file created!\n" );
+
+            //Initialize data
+            for( int i = 0; i < TOTAL_DATA; ++i )
+            {
+                gData[ i ] = 0;
+                SDL_RWwrite( file, &gData[ i ], sizeof(Sint32), 1 );
+            }
+
+            //Close file handler
+            SDL_RWclose( file );
+        }
+        else
+        {
+            printf( "Error: Unable to create file! SDL Error: %s\n", SDL_GetError() );
+            success = false;
+        }
+    }        //File exists
+else
+    {
+    //Load data
+    printf( "Reading file...!\n" );
+    for( int i = 0; i < TOTAL_DATA; ++i )
+    {
+        SDL_RWread( file, &gData[ i ], sizeof(Sint32), 1 );
+    }
+
+    //Close file handler
+    SDL_RWclose( file );
+    }
+    return success;
+}
+
+
+
 SDL_Color textColor = { 0, 0, 0, 0xFF };
 
 
@@ -646,6 +697,41 @@ void setAlpha( Uint8 alpha );
 
 SDL_Rect gSpriteClips[ WALKING_ANIMATION_FRAMES ];
 
+void closeRWopsWrapper(char *path)
+{
+    //Open data for writing
+    SDL_RWops* file = SDL_RWFromFile( path, "w+b" );
+    if( file != NULL )
+    {
+        //Save data
+        for( int i = 0; i < TOTAL_DATA; ++i )
+        {
+            SDL_RWwrite( file, &gData[ i ], sizeof(Sint32), 1 );
+        }
+
+        //Close file handler
+        SDL_RWclose( file );
+    }
+    else
+    {
+        printf( "Error: Unable to save file! %s\n", SDL_GetError() );
+    }
+    	//Free global font
+	TTF_CloseFont( gFont );
+	gFont = NULL;
+
+	//Destroy window
+	SDL_DestroyRenderer( gRenderer );
+	SDL_DestroyWindow( gWindow );
+	gWindow = NULL;
+	gRenderer = NULL;
+
+	//Quit SDL subsystems
+	TTF_Quit();
+	IMG_Quit();
+	SDL_Quit();
+}
+
 bool init()
 {
     //Initialization flag
@@ -885,7 +971,7 @@ SDL_Texture* loadTexture( char *path )
     return newTexture;
 }
 
-bool loadMedia(struct ttfStruct *structinput)
+bool loadMedia(struct ttfStruct *structinput, SDL_Color textColor)
 {
     //Loading success flag
     bool success = true;
@@ -900,8 +986,6 @@ bool loadMedia(struct ttfStruct *structinput)
     else
     {
         //Render text
-
-        SDL_Color textColor = { 0, 0, 0, 255 };
         if( !loadFromRenderedText(structinput, textColor) )
         {
             printf( "Failed to render text texture!\n" );
@@ -1338,12 +1422,15 @@ Uint32 getTicks(struct timerStruct *inputStruct)
 
 int main( int argc, char* args[] )
 {
+    SDL_Color highlightColor = { 0xFF, 0, 0, 0xFF };
 
+    //Current input point
+    int currentData = 0;
     bool quit = false;
     SDL_Event e;
     double degrees = 0;
     SDL_RendererFlip flipType = SDL_FLIP_NONE;
-
+    SDL_RWopsWrapper("33_file_reading_and_writing/nums.bin");
     //Start up SDL and create window
     if( !initRenderer() )
     {
@@ -1357,9 +1444,13 @@ int main( int argc, char* args[] )
         struct ttfStruct gfpsTexture;
         struct ttfStruct gInputTextTexture;
         struct ttfStruct gPromptTextTexture;
+        struct ttfStruct gDataTextures[ TOTAL_DATA ];
+
         struct dotStructArray gDotTextureArray;
         struct dotStructArray gDotTextureArray2;
         struct textureStruct gBGTexture;
+
+        SDL_Color textColor = { 0, 0, 0, 255 };
 
         gBGTexture.imagePath = "31_scrolling_backgrounds/bg.png";
         gDotTextureArray.imagePath = "31_scrolling_backgrounds/dot.bmp";
@@ -1376,6 +1467,12 @@ int main( int argc, char* args[] )
 
         gfpsTexture.imagePath = "22_timing/lazy.ttf";
         gPromptTextTexture.imagePath = "22_timing/lazy.ttf";
+
+        for(int i = 0; i < TOTAL_DATA; i++)
+        {
+            gDataTextures[i].imagePath = "22_timing/lazy.ttf";
+        }
+
         gfpsTexture.xPos = 0;
         gfpsTexture.yPos = 0;
         gInputTextTexture.xPos = 0;
@@ -1390,20 +1487,29 @@ int main( int argc, char* args[] )
         gTimeTexture.textureText = "LMAO";
         gInputTextTexture.imagePath = "22_timing/lazy.ttf";
         gInputTextTexture.textureText = inputText;
-        if( !loadMedia(&gfpsTexture) )
+        if( !loadMedia(&gfpsTexture, textColor) )
         {
             printf( "Failed to load media! \n" );
         }
-        if( !loadMedia(&gInputTextTexture) )
+/*
+        for(int i = 0; i < TOTAL_DATA; i++)
+        {
+            if( !loadMedia(&gDataTextures[i], highlightColor)  )
+            {
+                printf( "Failed to load media! \n" );
+            }
+        }
+        */
+        if( !loadMedia(&gInputTextTexture, textColor) )
         {
             printf( "Failed to load media! \n" );
         }
-        if( !loadMedia(&gPromptTextTexture) )
+        if( !loadMedia(&gPromptTextTexture, textColor) )
         {
             printf( "Failed to load media! \n" );
         }
 
-        if( !loadMedia(&gTimeTexture) )
+        if( !loadMedia(&gTimeTexture, textColor) )
         {
             printf( "Failed to load media! \n" );
         }
@@ -1444,7 +1550,7 @@ int main( int argc, char* args[] )
         while( !quit )
         {
             timerStart(&capTimer);
-            bool renderText = false;
+        //    bool renderText = false;
             //Handle events on queue
             while( SDL_PollEvent( &e ) != 0 )
             {
@@ -1454,79 +1560,64 @@ int main( int argc, char* args[] )
                     quit = true;
                 }
                  else if( e.type == SDL_KEYDOWN )
-                    {
-                        //Handle backspace
-                        if( e.key.keysym.sym == SDLK_BACKSPACE && strlen(inputText) > 0 )
-                        {
-                            //lop off character
-                            int index = strlen(inputText) - 1;
-                            char* buffer = malloc(strlen(inputText) + 1);
-                            if(buffer != NULL)
-                            {
-                                strcpy(buffer, inputText);
-                                buffer[ index ] = '\0';
-                            }
-                            inputText = malloc(strlen(buffer));
-                            strcpy(inputText, buffer);
-                            renderText = true;
-                        }
-                        //Handle copy
-                        else if( e.key.keysym.sym == SDLK_c && SDL_GetModState() & KMOD_CTRL )
-                        {
-                            SDL_SetClipboardText( inputText );
-                        }
-                        //Handle paste
-                        else if( e.key.keysym.sym == SDLK_v && SDL_GetModState() & KMOD_CTRL )
-                        {
-                            inputText = SDL_GetClipboardText();
-                            renderText = true;
-                        }
-                    }
-                    else if( e.type == SDL_TEXTINPUT )
-                    {
-                        //Not copy or pasting
-                        if( !( SDL_GetModState() & KMOD_CTRL && ( e.text.text[ 0 ] == 'c' || e.text.text[ 0 ] == 'C' || e.text.text[ 0 ] == 'v' || e.text.text[ 0 ] == 'V' ) ) )
-                        {
-                            //Append character
-                            char* buffer = malloc(strlen(inputText) + 2);
-                            if(buffer != NULL)
-                            {
-                                strcpy(buffer, inputText);
-                                strcat(buffer, e.text.text);
+					{
+						switch( e.key.keysym.sym )
+						{
+						    char textBuffer[100] = "";
+							//Previous data entry
+							case SDLK_UP:
+							//Rerender previous entry input point
+							sprintf(textBuffer, "%u", gData[ currentData ]  );
+							gDataTextures[ currentData ].textureText = textBuffer;
+							loadMedia(&gDataTextures[ currentData ], textColor);
+							--currentData;
+							if( currentData < 0 )
+							{
+								currentData = TOTAL_DATA - 1;
+							}
 
-                            }
-                            inputText = malloc(strlen(buffer) + 1);
-                            strcpy(inputText, buffer);
-                            renderText = true;
-                        }
-                    }
+							//Rerender current entry input point
+							sprintf(textBuffer, "%u", gData[ currentData ]  );
+							gDataTextures[ currentData ].textureText = textBuffer;
+							loadMedia(&gDataTextures[ currentData ], highlightColor);
+							break;
+
+							//Next data entry
+							case SDLK_DOWN:
+							//Rerender previous entry input point
+							sprintf(textBuffer, "%u", gData[ currentData ]  );
+							gDataTextures[ currentData ].textureText = textBuffer;
+							loadMedia(&gDataTextures[ currentData ], textColor);
+							++currentData;
+							if( currentData == TOTAL_DATA )
+							{
+								currentData = 0;
+							}
+
+							//Rerender current entry input point
+							sprintf(textBuffer, "%u", gData[ currentData ]  );
+							gDataTextures[ currentData ].textureText = textBuffer;
+							loadMedia(&gDataTextures[ currentData ], highlightColor);
+							break;
+
+							//Decrement input point
+							case SDLK_LEFT:
+							--gData[ currentData ];
+							sprintf(textBuffer, "%u", gData[ currentData ]  );
+							gDataTextures[ currentData ].textureText = textBuffer;
+							loadMedia(&gDataTextures[ currentData ], highlightColor);
+							break;
+
+							//Increment input point
+							case SDLK_RIGHT:
+							++gData[ currentData ];
+							sprintf(textBuffer, "%u", gData[ currentData ]  );
+							gDataTextures[ currentData ].textureText = textBuffer;
+							loadMedia(&gDataTextures[ currentData ], highlightColor);
+							break;
+						}
+					}
                 }
-                                //Rerender text if needed
-                if( renderText )
-                {
-                    //Text is not empty
-                    if( strcmp(inputText, "") != 0)
-                    {
-                        //Render new text
-                        gInputTextTexture.textureText = inputText;
-                        loadFromRenderedText(&gInputTextTexture, textColor);
-                    }
-                    //Text is empty
-                    else
-                    {
-                        //Render space texture
-                        gInputTextTexture.textureText = " ";
-                        loadFromRenderedText(&gInputTextTexture, textColor);
-                    }
-                }
-               //handleDotEventArray(&gDotTextureArray, &e);
-
-
-                //The background scrolling offset
-
-               // moveDotArraySquareCircle(&gDotTextureArray, &gDotTextureArray2.mColliders, &wall);
-                //moveDotArray(&gDotTextureArray, &wall);
-                moveStruct(&gDotTextureArray);
 
                 float avgFPS = countedFrames / ( getTicks(&fpsTimer) / 1000.f );
                 if( avgFPS > 2000000 )
@@ -1578,7 +1669,7 @@ int main( int argc, char* args[] )
                 gfpsTexture.yPos = ( gfpsTexture.mHeight) ;
                 gfpsTexture.textureText = timeText;
 
-                if( !loadMedia(&gfpsTexture) )
+                if( !loadMedia(&gfpsTexture, textColor) )
                 {
                     printf( "Failed to load media! \n" );
                 }
@@ -1589,15 +1680,26 @@ int main( int argc, char* args[] )
             //    textureRender(&gBGTexture, NULL, degrees, NULL, flipType, scrollingOffset + gBGTexture.mWidth, 0);
              //   textureDotRenderArray(&gDotTextureArray, NULL, degrees, NULL, flipType, 0, 0);
                 textureRenderttf(&gfpsTexture, NULL, degrees, NULL, flipType);
+
                 gPromptTextTexture.xPos = (SCREEN_WIDTH - gPromptTextTexture.mWidth) / 2;
                 gPromptTextTexture.yPos = 0;
                 textureRenderttf(&gPromptTextTexture, NULL, degrees, NULL, flipType);
 
-                gInputTextTexture.xPos = (SCREEN_WIDTH - gInputTextTexture.mWidth) / 2;
+                for( int i = 0; i < TOTAL_DATA; ++i )
+                {
+                    gDataTextures[i].xPos = (SCREEN_WIDTH - gDataTextures[ i ].mWidth ) / 2;
+                    gDataTextures[i].yPos = (gPromptTextTexture.mWidth + gDataTextures[ 0 ].mHeight * i);
+                    textureRenderttf(&gDataTextures[i], NULL, degrees, NULL, flipType);
+                }
+
+
+
+
+             /*   gInputTextTexture.xPos = (SCREEN_WIDTH - gInputTextTexture.mWidth) / 2;
                 gInputTextTexture.yPos = gPromptTextTexture.mHeight;
                 textureRenderttf(&gInputTextTexture, NULL, degrees, NULL, flipType);
+                */
                // textureDotRenderArray(&gDotTextureArray2, NULL, degrees, NULL, flipType, -gDotTextureArray2.mColliders.r, -gDotTextureArray2.mColliders.r);
-
 
 
                 SDL_RenderPresent( gRenderer );
