@@ -1491,15 +1491,24 @@ int main( int argc, char* args[] )
         {
             printf( "Failed to load media! \n" );
         }
-/*
+
+
+        char textBuffer1[100];
+        for(int i = 0; i < TOTAL_DATA; i++)
+        {
+            sprintf(textBuffer1, "%u", gData[ i ]  );
+            gDataTextures[i].textureText = textBuffer1;
+            loadMedia(&gDataTextures[i], highlightColor);
+        }
+        /*
         for(int i = 0; i < TOTAL_DATA; i++)
         {
             if( !loadMedia(&gDataTextures[i], highlightColor)  )
             {
                 printf( "Failed to load media! \n" );
             }
-        }
-        */
+        }*/
+
         if( !loadMedia(&gInputTextTexture, textColor) )
         {
             printf( "Failed to load media! \n" );
@@ -1546,7 +1555,7 @@ int main( int argc, char* args[] )
         SDL_Rect camera = { 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT };
         int scrollingOffset = 0;
         //While application is running
-        SDL_StartTextInput();
+     //   SDL_StartTextInput();
         while( !quit )
         {
             timerStart(&capTimer);
@@ -1711,7 +1720,7 @@ int main( int argc, char* args[] )
                     SDL_Delay( SCREEN_TICKS_PER_FRAME - frameTicks );
                 }
             }
-
+        closeRWopsWrapper("33_file_reading_and_writing/nums.bin");
         SDL_StopTextInput();
         gTexture = gDotTextureArray.mTexture;
         closeTexture();
@@ -1722,136 +1731,7 @@ int main( int argc, char* args[] )
         }
 
 
-
-
         //Free resources and close SDL
 
         return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/* Old
-
-
-//Screen dimension constants
-const int SCREEN_WIDTH = 1600;
-const int SCREEN_HEIGHT = 900;
-
-//Main loop flag
-bool quit = false;
-
-//Event handler
-SDL_Event e;
-
-void createPic();
-
-//Picture to be placed in the window
-SDL_Surface* screenPicture = NULL;
-
-//The window we'll be rendering to
-SDL_Window* window = NULL;
-
-//The surface contained by the window
-SDL_Surface* screenSurface = NULL;
-
-int main( int argc, char* args[] )
-{
-
-
-    //Initialize SDL
-    if( SDL_Init( SDL_INIT_VIDEO ) < 0 )
-    {
-        6( "SDL could not initialize! SDL_Error: %s\n", SDL_GetError() );
-    }
-    else
-    {
-        //Create window
-        window = SDL_CreateWindow( "SDL Tutorial", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN );
-        if( window == NULL )
-        {
-            printf( "Window could not be created! SDL_Error: %s\n", SDL_GetError() );
-        }
-        else
-        {
-            //Get window surface
-            screenSurface = SDL_GetWindowSurface( window );
-
-            //Fill the surface white
-            SDL_FillRect( screenSurface, NULL, SDL_MapRGB( screenSurface->format, 0xFF, 0xFF, 0xFF ) );
-
-            SDL_BlitSurface( screenPicture, NULL, screenSurface, NULL );
-            //Update the surface
-            SDL_UpdateWindowSurface( window );
-
-                     //While application is running
-            while( !quit )
-            {
-                     //Handle events on queue
-                while( SDL_PollEvent( &e ) != 0 )
-                {
-                    //User requests quit
-                    if( e.type == SDL_QUIT )
-                    {
-                        quit = true;
-                    }
-                }
-           }
-         }
-
-     //Destroy window
-    SDL_DestroyWindow( window );
-
-    //Quit SDL subsystems
-    SDL_Quit();
-}
-
-    return 0;
-}
-
-void createPic()
-{
-    //Load splash image
-    screenPicture = SDL_LoadBMP( "Hello.bmp" );
-
-    if( screenPicture == NULL )
-    {
-    printf( "Unable to load image %s! SDL Error: %s\n", "02_getting_an_image_on_the_screen/hello_world.bmp", SDL_GetError() );
-    }
-}
-*/
-
-
