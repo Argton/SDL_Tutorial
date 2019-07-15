@@ -94,6 +94,7 @@ int main()
 *
 *************************************/
 
+#define TOTAL_WINDOWS 3
 
 //The images that correspond to a keypress
 SDL_Surface* gKeyPressSurfaces[ KEY_PRESS_SURFACE_TOTAL ];
@@ -259,7 +260,8 @@ struct dotStructArray
 
 struct LWindow
 {
-
+    SDL_Renderer* mRenderer;
+    int mWindowID;
     SDL_Window* mWindow;
     int mWidth;
     int mHeight;
@@ -267,6 +269,7 @@ struct LWindow
     bool mKeyboardFocus;
     bool mFullScreen;
     bool mMinimized;
+    bool mShown;
 };
 /************************************
 *
@@ -364,12 +367,14 @@ bool init()
 bool initLWindow(struct LWindow *inputStruct)
 {
     inputStruct->mWindow = NULL;
+    inputStruct->mRenderer = NULL;
     inputStruct->mWidth = 0;
     inputStruct->mHeight = 0;
     inputStruct->mMouseFocus = false;
     inputStruct->mKeyboardFocus = false;
     inputStruct->mFullScreen = false;
     inputStruct->mMinimized = false;
+    inputStruct->mWindowID = -1;
   /*  inputStruct->mWindow = SDL_CreateWindow( "SDL Tutorial", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE );
     if( inputStruct->mWindow != NULL )
     {
@@ -536,8 +541,8 @@ bool initLWindowRenderer(struct LWindow *inputStruct)
             inputStruct->mWidth = SCREEN_WIDTH;
             inputStruct->mHeight = SCREEN_HEIGHT;
             //Create renderer for window
-            gRenderer = SDL_CreateRenderer( inputStruct->mWindow, -1, SDL_RENDERER_ACCELERATED);
-            if( gRenderer == NULL )
+            inputStruct->mRenderer = SDL_CreateRenderer( inputStruct->mWindow, -1, SDL_RENDERER_ACCELERATED);
+            if( inputStruct->mRenderer  == NULL )
             {
                 printf( "Renderer could not be created! SDL Error: %s\n", SDL_GetError() );
                 success = false;
@@ -545,7 +550,7 @@ bool initLWindowRenderer(struct LWindow *inputStruct)
             else
             {
                 //Initialize renderer color
-                SDL_SetRenderDrawColor( gRenderer, 0xFF, 0xFF, 0xFF, 0xFF );
+                SDL_SetRenderDrawColor( inputStruct->mRenderer, 0xFF, 0xFF, 0xFF, 0xFF );
 
                 //Initialize PNG loading
                 int imgFlags = IMG_INIT_PNG;
@@ -557,7 +562,11 @@ bool initLWindowRenderer(struct LWindow *inputStruct)
                 else
                 {
                     //Get window surface
-                    gScreenSurface = SDL_GetWindowSurface( gWindow );
+                    gScreenSurface = SDL_GetWindowSurface( inputStruct->mWindow );
+                    //Grab window identifier
+                    inputStruct->mWindowID = SDL_GetWindowID( inputStruct->mWindow );
+                    //Flag as opened
+                    inputStruct->mShown = true;
                 }
             }
         }
@@ -574,7 +583,7 @@ bool initLWindowRenderer(struct LWindow *inputStruct)
             printf( "SDL_mixer could not initialize! SDL_mixer Error: %s\n", Mix_GetError() );
             success = false;
         }
-    return success;
+    return inputStruct->mWindow != NULL && inputStruct->mRenderer != NULL && success;
 }
 
 bool initVsyncRenderer()
@@ -1453,92 +1462,132 @@ void handleEvent(struct buttonStruct *inputStruct, SDL_Event* e)
 
 void handleLWindowEvent(struct LWindow *inputStruct, SDL_Event* e)
 {
-    if( e->type == SDL_WINDOWEVENT )
+    if( e->type == SDL_WINDOWEVENT && e->window.windowID == inputStruct->mWindowID)
     {
         //Caption update flag
         bool updateCaption = false;
         switch( e->window.event )
-        {
-            //Get new dimensions and repaint on window size change
-            case SDL_WINDOWEVENT_SIZE_CHANGED:
-            inputStruct->mWidth = e->window.data1;
-            inputStruct->mHeight = e->window.data2;
-            SDL_RenderPresent( gRenderer );
-            break;
+		{
+			//Window appeared
+			case SDL_WINDOWEVENT_SHOWN:
+			inputStruct->mShown = true;
+			break;
 
-            //Repaint on exposure
-            case SDL_WINDOWEVENT_EXPOSED:
-            SDL_RenderPresent( gRenderer );
-            break;
+			//Window disappeared
+			case SDL_WINDOWEVENT_HIDDEN:
+			inputStruct->mShown = false;
+			break;
 
-            //Mouse entered window
-            case SDL_WINDOWEVENT_ENTER:
-            inputStruct->mMouseFocus = true;
-            updateCaption = true;
-            break;
+			//Get new dimensions and repaint
+			case SDL_WINDOWEVENT_SIZE_CHANGED:
+			inputStruct->mWidth = e->window.data1;
+			inputStruct->mHeight = e->window.data2;
+			SDL_RenderPresent( inputStruct->mRenderer );
+			break;
 
-            //Mouse left window
-            case SDL_WINDOWEVENT_LEAVE:
-            inputStruct->mMouseFocus = false;
-            updateCaption = true;
-            break;
+			//Repaint on expose
+			case SDL_WINDOWEVENT_EXPOSED:
+			SDL_RenderPresent( inputStruct->mRenderer );
+			break;
 
-            //Window has keyboard focus
-            case SDL_WINDOWEVENT_FOCUS_GAINED:
-            inputStruct->mKeyboardFocus = true;
-            updateCaption = true;
-            break;
+			//Mouse enter
+			case SDL_WINDOWEVENT_ENTER:
+			inputStruct->mMouseFocus = true;
+			updateCaption = true;
+			break;
 
-            //Window lost keyboard focus
-            case SDL_WINDOWEVENT_FOCUS_LOST:
-            inputStruct->mKeyboardFocus = false;
-            updateCaption = true;
-            break;
+			//Mouse exit
+			case SDL_WINDOWEVENT_LEAVE:
+			inputStruct->mMouseFocus = false;
+			updateCaption = true;
+			break;
 
-             //Window minimized
-            case SDL_WINDOWEVENT_MINIMIZED:
+			//Keyboard focus gained
+			case SDL_WINDOWEVENT_FOCUS_GAINED:
+			inputStruct->mKeyboardFocus = true;
+			updateCaption = true;
+			break;
+
+			//Keyboard focus lost
+			case SDL_WINDOWEVENT_FOCUS_LOST:
+			inputStruct->mKeyboardFocus = false;
+			updateCaption = true;
+			break;
+
+			//Window minimized
+			case SDL_WINDOWEVENT_MINIMIZED:
             inputStruct->mMinimized = true;
             break;
 
-            //Window maxized
-            case SDL_WINDOWEVENT_MAXIMIZED:
-            inputStruct->mMinimized = false;
+			//Window maxized
+			case SDL_WINDOWEVENT_MAXIMIZED:
+			inputStruct->mMinimized = false;
             break;
 
-            //Window restored
-            case SDL_WINDOWEVENT_RESTORED:
-            inputStruct->mMinimized = false;
+			//Window restored
+			case SDL_WINDOWEVENT_RESTORED:
+			inputStruct->mMinimized = false;
             break;
-        }
+
+			//Hide on close
+			case SDL_WINDOWEVENT_CLOSE:
+			SDL_HideWindow( inputStruct->mWindow );
+			break;
+		}
         //Update window caption with new data
         if( updateCaption )
         {
             char textBuffer1[100];
-            strcpy(textBuffer1, "SDL Tutorial - MouseFocus:");
+            char textBuffer2[100];
+            strcpy(textBuffer1, "SDL Tutorial - ID: ");
+            sprintf(textBuffer2, "%d", inputStruct->mWindowID );
+            strcat(textBuffer1, textBuffer2);
+            strcat(textBuffer1, " MouseFocus:");
             strcat(textBuffer1, ( inputStruct->mMouseFocus ) ? "On" : "Off" );
             strcat(textBuffer1, " KeyboardFocus:");
             strcat(textBuffer1, ( inputStruct->mKeyboardFocus ) ? "On" : "Off" );
             SDL_SetWindowTitle( inputStruct->mWindow, textBuffer1 );
         }
     }
-        //Enter exit full screen on return key
-    else if( e->type == SDL_KEYDOWN && e->key.keysym.sym == SDLK_RETURN )
-    {
-        if( inputStruct->mFullScreen )
-        {
-            SDL_SetWindowFullscreen( inputStruct->mWindow, SDL_FALSE );
-            inputStruct->mFullScreen = false;
-        }
-        else
-        {
-            SDL_SetWindowFullscreen( inputStruct->mWindow, SDL_TRUE );
-            inputStruct->mFullScreen = true;
-            inputStruct->mMinimized = false;
-        }
-    }
 }
 
+void focus(struct LWindow *inputStruct)
+{
+    //Restore window if needed
+    if( !inputStruct->mShown )
+	{
+		SDL_ShowWindow( inputStruct->mWindow );
+	}
 
+	//Move window forward
+	SDL_RaiseWindow( inputStruct->mWindow );
+}
+
+void renderLWindow(struct LWindow *inputStruct)
+{
+	if( !inputStruct->mMinimized )
+	{
+		//Clear screen
+		SDL_SetRenderDrawColor( inputStruct->mRenderer, 0xFF, 0xFF, 0xFF, 0xFF );
+		SDL_RenderClear( inputStruct->mRenderer );
+
+		//Update screen
+		SDL_RenderPresent( inputStruct->mRenderer );
+	}
+}
+
+void freeLWindow(struct LWindow *inputStruct)
+{
+	if( inputStruct->mWindow != NULL )
+	{
+		SDL_DestroyWindow( inputStruct->mWindow );
+	}
+
+	inputStruct->mMouseFocus = false;
+	inputStruct->mKeyboardFocus = false;
+	inputStruct->mWidth = 0;
+	inputStruct->mHeight = 0;
+}
 
 void timerInit(struct timerStruct *inputStruct)
 {
@@ -1641,14 +1690,15 @@ int main( int argc, char* args[] )
         printf( "Failed to initialize!\n" );
     }
     */
-    struct LWindow gWindow;
-    initLWindow(&gWindow);
-    if( !initLWindowRenderer(&gWindow) )
+    struct LWindow gWindows[ TOTAL_WINDOWS ];
+    for(int i = 0; i < TOTAL_WINDOWS; i++)
     {
-        printf( "Failed to initialize!\n" );
+        initLWindow(&gWindows[i]);
+        if( !initLWindowRenderer(&gWindows[i]) )
+        {
+            printf( "Failed to initialize!\n" );
+        }
     }
-    else
-    {
         struct ttfStruct gTimeTexture;
         struct ttfStruct gfpsTexture;
         struct ttfStruct gInputTextTexture;
@@ -1708,16 +1758,20 @@ int main( int argc, char* args[] )
         gTimeTexture.textureText = "LMAO";
         gInputTextTexture.imagePath = "22_timing/lazy.ttf";
         gInputTextTexture.textureText = inputText;
-        if( !loadMedia(&gfpsTexture, textColor) )
+
+       /* if( !loadMedia(&gfpsTexture, textColor) )
         {
             printf( "Failed to load media! \n" );
         }
-        if( !LTexture(&gSceneTexture) )
+        */
+      /*  if( !LTexture(&gSceneTexture) )
         {
             printf( "Failed to load media! \n" );
+            printf("lmao \n");
         }
+        */
 
-
+/*
         char textBuffer1[100];
         for(int i = 0; i < TOTAL_DATA; i++)
         {
@@ -1725,6 +1779,7 @@ int main( int argc, char* args[] )
             gDataTextures[i].textureText = textBuffer1;
             loadMedia(&gDataTextures[i], highlightColor);
         }
+        */
         /*
         for(int i = 0; i < TOTAL_DATA; i++)
         {
@@ -1733,7 +1788,7 @@ int main( int argc, char* args[] )
                 printf( "Failed to load media! \n" );
             }
         }*/
-
+/*
         if( !loadMedia(&gInputTextTexture, textColor) )
         {
             printf( "Failed to load media! \n" );
@@ -1755,6 +1810,7 @@ int main( int argc, char* args[] )
         {
             printf( "Failed to load media! \n" );
         }
+        */
     //    gDotTextureArray2.mTexture = gDotTextureArray.mTexture;
     //    gDotTextureArray2.DOT_WIDTH = gDotTextureArray.DOT_WIDTH;
     //    gDotTextureArray2.DOT_HEIGHT = gDotTextureArray.DOT_HEIGHT;
@@ -1793,21 +1849,54 @@ int main( int argc, char* args[] )
                 {
                     quit = true;
                 }
-                   //Handle window events
-                    handleLWindowEvent( &gWindow, &e );
-                }
-                //Only draw when not minimized
-                if( !gWindow.mMinimized )
+                for(int i = 0; i < TOTAL_WINDOWS; i++)
                 {
-
-                    //Clear screen
-                    SDL_SetRenderDrawColor( gRenderer, 0xFF, 0xFF, 0xFF, 0xFF );
-                    SDL_RenderClear( gRenderer );
-
-                    textureRender(&gSceneTexture, NULL, degrees, NULL, flipType, (gWindow.mWidth - gSceneTexture.mWidth) / 2, (gWindow.mHeight - gSceneTexture.mHeight ) / 2);
-                    //Update screen
-                    SDL_RenderPresent( gRenderer );
+                    handleLWindowEvent( &gWindows[i], &e );
                 }
+                //Pull up window
+				if( e.type == SDL_KEYDOWN )
+				{
+					switch( e.key.keysym.sym )
+					{
+						case SDLK_1:
+						focus(&gWindows[ 0 ]);
+						break;
+
+						case SDLK_2:
+						focus(&gWindows[ 1 ]);
+						break;
+
+						case SDLK_3:
+						focus(&gWindows[ 2 ]);
+						break;
+					}
+				}
+            }
+
+                for(int i = 0; i < TOTAL_WINDOWS; i++)
+                {
+                    SDL_SetRenderDrawColor( gWindows[i].mRenderer, 0xFF, 0xFF, 0xFF, 0xFF );
+                    SDL_RenderClear( gWindows[i].mRenderer );
+                    renderLWindow(&gWindows[i]);
+                }
+
+               //Check all windows
+                bool allWindowsClosed = true;
+                for( int i = 0; i < TOTAL_WINDOWS; ++i )
+                {
+                    if( gWindows[ i ].mShown )
+                    {
+                        allWindowsClosed = false;
+                        break;
+                    }
+                }
+
+                //Application closed all windows
+                if( allWindowsClosed )
+                {
+                    quit = true;
+                }
+
 
                 float avgFPS = countedFrames / ( getTicks(&fpsTimer) / 1000.f );
                 if( avgFPS > 2000000 )
@@ -1911,13 +2000,13 @@ int main( int argc, char* args[] )
 
      //   closeRWopsWrapper("33_file_reading_and_writing/nums.bin");
    //     SDL_StopTextInput();
-        gTexture = gDotTextureArray.mTexture;
+       /* gTexture = gDotTextureArray.mTexture;
         closeTexture();
         close();
-        gTexture = gDotTextureArray2.mTexture;
+        gTexture = gDotTextureArray2.mTexture;*/
         closeTexture();
         close();
-        }
+
 
 
         //Free resources and close SDL
