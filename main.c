@@ -86,101 +86,17 @@ int main()
 
 */
 
+/************************************
+*
+*
+* Variables
+*
+*
+*************************************/
 
-
-//Button constants
-const int BUTTON_WIDTH = 300;
-const int BUTTON_HEIGHT = 200;
-const int TOTAL_BUTTONS = 4;
-const int SCREEN_FPS = 60;
-const int SCREEN_TICKS_PER_FRAME = 1000 / 60;
-
-
-
-#define TOTAL_DATA 10
-Sint32 gData[ TOTAL_DATA ];
-
-bool SDL_RWopsWrapper(char *path)
-{
-    bool success = false;
-    SDL_RWops* file = SDL_RWFromFile( path , "r+b" );
-    if( file == NULL )
-    {
-    printf( "Warning: Unable to open file! SDL Error: %s\n", SDL_GetError() );
-    //Create file for writing
-    file = SDL_RWFromFile( path , "w+b" );
-    if( file != NULL )
-        {
-            printf( "New file created!\n" );
-
-            //Initialize data
-            for( int i = 0; i < TOTAL_DATA; ++i )
-            {
-                gData[ i ] = 0;
-                SDL_RWwrite( file, &gData[ i ], sizeof(Sint32), 1 );
-            }
-
-            //Close file handler
-            SDL_RWclose( file );
-        }
-        else
-        {
-            printf( "Error: Unable to create file! SDL Error: %s\n", SDL_GetError() );
-            success = false;
-        }
-    }        //File exists
-else
-    {
-    //Load data
-    printf( "Reading file...!\n" );
-    for( int i = 0; i < TOTAL_DATA; ++i )
-    {
-        SDL_RWread( file, &gData[ i ], sizeof(Sint32), 1 );
-    }
-
-    //Close file handler
-    SDL_RWclose( file );
-    }
-    return success;
-}
-
-
-
-SDL_Color textColor = { 0, 0, 0, 0xFF };
-
-
-enum LButtonSprite
-{
-    BUTTON_SPRITE_MOUSE_OUT = 0,
-    BUTTON_SPRITE_MOUSE_OVER_MOTION = 1,
-    BUTTON_SPRITE_MOUSE_DOWN = 2,
-    BUTTON_SPRITE_MOUSE_UP = 3,
-    BUTTON_SPRITE_TOTAL = 4
-};
-
-//Loads individual image as texture
-SDL_Texture* loadTexture( char *path );
-
-//The window we'll be rendering to
-SDL_Window* gWindow = NULL;
-
-//The window renderer
-SDL_Renderer* gRenderer = NULL;
-
-//Current displayed texture
-SDL_Texture* gTexture = NULL;
-
-//The surface contained by the window
-SDL_Surface* gScreenSurface = NULL;
-
-//Loads individual image
-SDL_Surface* loadSurface( char *path );
 
 //The images that correspond to a keypress
 SDL_Surface* gKeyPressSurfaces[ KEY_PRESS_SURFACE_TOTAL ];
-
-//Current displayed image
-//SDL_Surface* gCurrentSurface = NULL;
 
 //The image we will load and show on the screen
 SDL_Surface* gImage = NULL;
@@ -194,8 +110,70 @@ char imagePathViewport[64] = "09_the_viewport/viewport.png";
 
 SDL_Texture* newTexture = NULL;
 
-bool checkCollision( SDL_Rect a, SDL_Rect b );
-bool loadMediaGeometry();
+//Button constants
+const int BUTTON_WIDTH = 300;
+const int BUTTON_HEIGHT = 200;
+const int TOTAL_BUTTONS = 4;
+const int SCREEN_FPS = 60;
+const int SCREEN_TICKS_PER_FRAME = 1000 / 60;
+
+#define WALKING_ANIMATION_FRAMES 4
+
+#define TOTAL_DATA 10
+
+Sint32 gData[ TOTAL_DATA ];
+
+//Globally used font
+TTF_Font *gFont = NULL;
+
+SDL_Texture* mTexture;
+
+//Image dimensions
+int globalWidth;
+int globalHeight;
+
+SDL_Color textColor = { 0, 0, 0, 0xFF };
+
+//The window we'll be rendering to
+SDL_Window* gWindow = NULL;
+
+//The window renderer
+SDL_Renderer* gRenderer = NULL;
+
+//Current displayed texture
+SDL_Texture* gTexture = NULL;
+
+//The surface contained by the window
+SDL_Surface* gScreenSurface = NULL;
+
+enum LButtonSprite
+{
+    BUTTON_SPRITE_MOUSE_OUT = 0,
+    BUTTON_SPRITE_MOUSE_OVER_MOTION = 1,
+    BUTTON_SPRITE_MOUSE_DOWN = 2,
+    BUTTON_SPRITE_MOUSE_UP = 3,
+    BUTTON_SPRITE_TOTAL = 4
+};
+
+/************************************
+*
+*
+* Structs
+*
+*
+*************************************/
+
+struct musicStruct
+{
+    Mix_Music *gMusic;
+    char *musicPath;
+};
+
+struct soundStruct
+{
+    Mix_Chunk *gSound;
+    char *musicPath;
+};
 
 struct timerStruct
 {
@@ -279,413 +257,20 @@ struct dotStructArray
     struct Circle mColliders;
 };
 
-
-bool checkCollisionArray( SDL_Rect *a, SDL_Rect *b );
-
-void shiftColliders(struct dotStructArray *inputStruct);
-
-double distanceSquared( int x1, int y1, int x2, int y2 )
-{
-    int deltaX = x2 - x1;
-    int deltaY = y2 - y1;
-    return deltaX*deltaX + deltaY*deltaY;
-}
-
-
-void initDot(struct dotStruct *inputStruct)
-{
-    inputStruct->DOT_WIDTH = 20;
-    inputStruct->DOT_HEIGHT = 20;
-    inputStruct->DOT_VEL = 1;
-    inputStruct->mPosX = 0;
-    inputStruct->mPosY = 0;
-    inputStruct->mVelX = 0;
-    inputStruct->mVelY = 0;
-    inputStruct->mCollider.w = inputStruct->DOT_WIDTH;
-    inputStruct->mCollider.h = inputStruct->DOT_HEIGHT;
-}
-
-void initDotArray(struct dotStructArray *inputStruct, int posX, int posY)
-{
-    inputStruct->DOT_WIDTH = 20;
-    inputStruct->DOT_HEIGHT = 20;
-    inputStruct->DOT_VEL = 10;
-    inputStruct->mPosX = posX;
-    inputStruct->mPosY = posY;
-    inputStruct->mVelX = 0;
-    inputStruct->mVelY = 0;
-
-    inputStruct->mCollider[ 0 ].w = 6;
-    inputStruct->mCollider[ 0 ].h = 1;
-
-    inputStruct->mCollider[ 1 ].w = 10;
-    inputStruct->mCollider[ 1 ].h = 1;
-
-    inputStruct->mCollider[ 2 ].w = 14;
-    inputStruct->mCollider[ 2 ].h = 1;
-
-    inputStruct->mCollider[ 3 ].w = 16;
-    inputStruct->mCollider[ 3 ].h = 2;
-
-    inputStruct->mCollider[ 4 ].w = 18;
-    inputStruct->mCollider[ 4 ].h = 2;
-
-    inputStruct->mCollider[ 5 ].w = 20;
-    inputStruct->mCollider[ 5 ].h = 6;
-
-    inputStruct->mCollider[ 6 ].w = 18;
-    inputStruct->mCollider[ 6 ].h = 2;
-
-    inputStruct->mCollider[ 7 ].w = 16;
-    inputStruct->mCollider[ 7 ].h = 2;
-
-    inputStruct->mCollider[ 8 ].w = 14;
-    inputStruct->mCollider[ 8 ].h = 1;
-
-    inputStruct->mCollider[ 9 ].w = 10;
-    inputStruct->mCollider[ 9 ].h = 1;
-
-    inputStruct->mCollider[ 10 ].w = 6;
-    inputStruct->mCollider[ 10 ].h = 1;
-
-    inputStruct->mColliders.r = inputStruct->DOT_WIDTH / 2;
-    shiftColliders(inputStruct);
-}
-
-
-
-
-void handleDotEvent(struct dotStruct *inputStruct, SDL_Event *e)
-{
-//If a key was pressed
-    if( e->type == SDL_KEYDOWN && e->key.repeat == 0 )
-    {
-        //Adjust the velocity
-        switch( e->key.keysym.sym )
-        {
-            case SDLK_UP: inputStruct->mVelY -= inputStruct->DOT_VEL; break;
-            case SDLK_DOWN: inputStruct->mVelY += inputStruct->DOT_VEL; break;
-            case SDLK_LEFT: inputStruct->mVelX -= inputStruct->DOT_VEL; break;
-            case SDLK_RIGHT: inputStruct->mVelX += inputStruct->DOT_VEL; break;
-        }
-    }
-    //If a key was released
-    else if( e->type == SDL_KEYUP && e->key.repeat == 0 )
-    {
-        //Adjust the velocity
-        switch( e->key.keysym.sym )
-        {
-            case SDLK_UP: inputStruct->mVelY += inputStruct->DOT_VEL; break;
-            case SDLK_DOWN: inputStruct->mVelY -= inputStruct->DOT_VEL; break;
-            case SDLK_LEFT: inputStruct->mVelX += inputStruct->DOT_VEL; break;
-            case SDLK_RIGHT: inputStruct->mVelX -= inputStruct->DOT_VEL; break;
-        }
-    }
-}
-
-void handleDotEventArray(struct dotStructArray *inputStruct, SDL_Event *e)
-{
-//If a key was pressed
-    if( e->type == SDL_KEYDOWN && e->key.repeat == 0 )
-    {
-        //Adjust the velocity
-        switch( e->key.keysym.sym )
-        {
-            case SDLK_UP: inputStruct->mVelY -= inputStruct->DOT_VEL; break;
-            case SDLK_DOWN: inputStruct->mVelY += inputStruct->DOT_VEL; break;
-            case SDLK_LEFT: inputStruct->mVelX -= inputStruct->DOT_VEL; break;
-            case SDLK_RIGHT: inputStruct->mVelX += inputStruct->DOT_VEL; break;
-        }
-    }
-    //If a key was released
-    else if( e->type == SDL_KEYUP && e->key.repeat == 0 )
-    {
-        //Adjust the velocity
-        switch( e->key.keysym.sym )
-        {
-            case SDLK_UP: inputStruct->mVelY += inputStruct->DOT_VEL; break;
-            case SDLK_DOWN: inputStruct->mVelY -= inputStruct->DOT_VEL; break;
-            case SDLK_LEFT: inputStruct->mVelX += inputStruct->DOT_VEL; break;
-            case SDLK_RIGHT: inputStruct->mVelX -= inputStruct->DOT_VEL; break;
-        }
-    }
-}
-
-void moveDot(struct dotStruct *inputStruct, SDL_Rect *wall)
-{
-    inputStruct->mPosX += inputStruct->mVelX;
-    inputStruct->mCollider.x = inputStruct->mPosX;
-    //If the dot went too far to the left or right
-    if( ( inputStruct->mPosX < 0 ) || ( inputStruct->mPosX + inputStruct->DOT_WIDTH > SCREEN_WIDTH ) || checkCollision(inputStruct->mCollider, *wall) )
-    {
-        //Move back
-        inputStruct->mPosX -= inputStruct->mVelX;
-        inputStruct->mCollider.x = inputStruct->mPosX;
-    }
-        //Move the dot up or down
-    inputStruct->mPosY += inputStruct->mVelY;
-    inputStruct->mCollider.y = inputStruct->mPosY;
-
-    //If the dot went too far up or down
-    if( ( inputStruct->mPosY < 0 ) || ( inputStruct->mPosY + inputStruct->DOT_HEIGHT > SCREEN_HEIGHT ) || checkCollision(inputStruct->mCollider, *wall) )
-    {
-        //Move back
-        inputStruct->mPosY -= inputStruct->mVelY;
-        inputStruct->mCollider.y = inputStruct->mPosY;
-    }
-}
-
-void moveDotArray(struct dotStructArray *inputStruct, SDL_Rect *wall)
-{
-    inputStruct->mPosX += inputStruct->mVelX;
-
-    shiftColliders(inputStruct);
-
-    //inputStruct->mCollider.x = inputStruct->mPosX;
-    //If the dot went too far to the left or right
-    if( ( inputStruct->mPosX < 0 ) || ( inputStruct->mPosX + inputStruct->DOT_WIDTH > SCREEN_WIDTH ) || checkCollisionArray(inputStruct->mCollider, wall) )
-    {
-        //Move back
-        inputStruct->mPosX -= inputStruct->mVelX;
-      //  inputStruct->mCollider.x = inputStruct->mPosX;
-        shiftColliders(inputStruct);
-    }
-        //Move the dot up or down
-    inputStruct->mPosY += inputStruct->mVelY;
-    //inputStruct->mCollider.y = inputStruct->mPosY;
-    shiftColliders(inputStruct);
-
-    //If the dot went too far up or down
-    if( ( inputStruct->mPosY < 0 ) || ( inputStruct->mPosY + inputStruct->DOT_HEIGHT > SCREEN_HEIGHT ) || checkCollisionArray(inputStruct->mCollider, wall) )
-    {
-        inputStruct->mPosY -= inputStruct->mVelY;
-        //inputStruct->mCollider.y = inputStruct->mPosY;
-        shiftColliders(inputStruct);
-    }
-
-}
-bool checkCircleCircleCollision( struct Circle *a, struct Circle *b )
-{
-    //Calculate total radius squared
-    int totalRadiusSquared = a->r + b->r;
-    totalRadiusSquared = totalRadiusSquared * totalRadiusSquared;
-
-    //If the distance between the centers of the circles is less than the sum of their radii
-    if( distanceSquared( a->x, a->y, b->x, b->y ) < ( totalRadiusSquared ) )
-    {
-        //The circles have collided
-        return true;
-    }
-
-    //If not
-    return false;
-}
-
-bool checkCollisionCircleRect( struct Circle *a, SDL_Rect *b )
-{
-    //Closest point on collision box
-    int cX, cY;
-
-    //Find closest x offset
-    if( a->x < b->x )
-    {
-        cX = b->x;
-    }
-    else if( a->x > b->x + b->w )
-    {
-        cX = b->x + b->w;
-    }
-    else
-    {
-        cX = a->x;
-    }
-       //Find closest y offset
-    if( a->y < b->y )
-    {
-        cY = b->y;
-    }
-    else if( a->y > b->y + b->h )
-    {
-        cY = b->y + b->h;
-    }
-    else
-    {
-        cY = a->y;
-    }
-
-    //If the closest point is inside the circle
-    if( distanceSquared( a->x, a->y, cX, cY ) < a->r * a->r )
-    {
-        //This box and the circle have collided
-        return true;
-    }
-
-    //If the shapes have not collided
-    return false;
-}
-
-void moveDotArraySquareCircle(struct dotStructArray *inputStruct, struct Circle *circle, SDL_Rect *wall)
-{
-    inputStruct->mPosX += inputStruct->mVelX;
-
-    shiftColliders(inputStruct);
-    //inputStruct->mCollider.x = inputStruct->mPosX;
-    //If the dot went too far to the left or right
-    if( ( inputStruct->mPosX - inputStruct->mColliders.r < 0 ) || ( inputStruct->mPosX + inputStruct->mColliders.r > SCREEN_WIDTH ) || checkCollisionCircleRect(&inputStruct->mColliders, wall) || checkCircleCircleCollision(&inputStruct->mColliders, circle) )
-    {
-        //Move back
-        inputStruct->mPosX -= inputStruct->mVelX;
-        shiftColliders(inputStruct);
-    }
-        //Move the dot up or down
-    inputStruct->mPosY += inputStruct->mVelY;
-
-    //inputStruct->mCollider.y = inputStruct->mPosY;
-    shiftColliders(inputStruct);
-
-    //If the dot went too far up or down
-    if( ( inputStruct->mPosY - inputStruct->mColliders.r < 0 ) || ( inputStruct->mPosY + inputStruct->mColliders.r > SCREEN_HEIGHT ) || checkCollisionCircleRect(&inputStruct->mColliders, wall) || checkCircleCircleCollision(&inputStruct->mColliders, circle)  )
-    {
-        inputStruct->mPosY -= inputStruct->mVelY;
-        //inputStruct->mCollider.y = inputStruct->mPosY;
-        shiftColliders(inputStruct);
-    }
-
-}
-
-void shiftColliders(struct dotStructArray *inputStruct)
-{
-    //int lengthOfArray = sizeof(*inputStruct->mCollider)/sizeof(inputStruct->mCollider[0]);
-    //The row offset
-	inputStruct->mColliders.x = inputStruct->mPosX;
-	inputStruct->mColliders.y = inputStruct->mPosY;
-}
-
-
-bool checkCollision( SDL_Rect a, SDL_Rect b )
-{
-    //The sides of the rectangles
-    int leftA, leftB;
-    int rightA, rightB;
-    int topA, topB;
-    int bottomA, bottomB;
-
-    //Calculate the sides of rect A
-    leftA = a.x;
-    rightA = a.x + a.w;
-    topA = a.y;
-    bottomA = a.y + a.h;
-
-    //Calculate the sides of rect B
-    leftB = b.x;
-    rightB = b.x + b.w;
-    topB = b.y;
-    bottomB = b.y + b.h;
-
-    //If any of the sides from A are outside of B
-    if( bottomA <= topB )
-    {
-        return false;
-    }
-
-    if( topA >= bottomB )
-    {
-        return false;
-    }
-
-    if( rightA <= leftB )
-    {
-        return false;
-    }
-
-    if( leftA >= rightB )
-    {
-        return false;
-    }
-
-    //If none of the sides from A are outside B
-    return true;
-}
-
-
-bool checkCollisionArray( SDL_Rect a[], SDL_Rect b[] )
-{
-    int lengthOfA;
-    int lengthOfB;
-    //The sides of the rectangles
-    int leftA, leftB;
-    int rightA, rightB;
-    int topA, topB;
-    int bottomA, bottomB;
-
-    lengthOfA = 11;
-    lengthOfB = 11;
-
-    for( int Abox = 0; Abox < lengthOfA; Abox++)
-    {
-        leftA = a[Abox].x;
-        rightA = a[Abox].x + a[Abox].w;
-        topA = a[Abox].y;
-        bottomA = a[Abox].y + a[Abox].h;
-        for( int Bbox = 0; Bbox < lengthOfB; Bbox++)
-        {
-            leftB = b[Bbox].x;
-            rightB = b[Bbox].x + b[Bbox].w;
-            topB = b[Bbox].y;
-            bottomB = b[Bbox].y + b[Bbox].h;
-
-            if( ( ( bottomA <= topB ) || ( topA >= bottomB ) || ( rightA <= leftB ) || ( leftA >= rightB ) ) == false )
-            {
-                //A collision is detected
-                return true;
-            }
-        }
-    }
-    //If neither set of collision boxes touched
-
-
-    return false;
-}
-
-struct musicStruct
-{
-    Mix_Music *gMusic;
-    char *musicPath;
-};
-
-struct soundStruct
-{
-    Mix_Chunk *gSound;
-    char *musicPath;
-};
-
-void setPosition(struct buttonStruct *structInput, int x, int y)
-{
-    structInput->xPos = x;
-    structInput->yPos = y;
-}
-
-bool LTexture(struct textureStruct *inputStruct);
-
-bool loadFromFile(char *path);
-void free();
-void render(int x, int y);
-
-
-bool loadFromRenderedText(struct ttfStruct *structinput, SDL_Color textColor );
-
-//Globally used font
-TTF_Font *gFont = NULL;
-
-SDL_Texture* mTexture;
-
-//Image dimensions
-int globalWidth;
-int globalHeight;
-
-//Scene sprites
-//SDL_Rect gSpriteClips[ 4 ];
-struct textureStruct gSpriteSheetTexture;
+/************************************
+*
+*
+* Forward declarations
+*
+*
+*************************************/
+
+//Loads individual image
+SDL_Surface* loadSurface( char *path );
+
+bool checkCollision( SDL_Rect a, SDL_Rect b );
+
+bool loadMediaGeometry();
 
 //Set blending
 void setBlendMode( SDL_BlendMode blending );
@@ -693,44 +278,32 @@ void setBlendMode( SDL_BlendMode blending );
 //Set alpha modulation
 void setAlpha( Uint8 alpha );
 
-#define WALKING_ANIMATION_FRAMES 4
-
 SDL_Rect gSpriteClips[ WALKING_ANIMATION_FRAMES ];
 
-void closeRWopsWrapper(char *path)
-{
-    //Open data for writing
-    SDL_RWops* file = SDL_RWFromFile( path, "w+b" );
-    if( file != NULL )
-    {
-        //Save data
-        for( int i = 0; i < TOTAL_DATA; ++i )
-        {
-            SDL_RWwrite( file, &gData[ i ], sizeof(Sint32), 1 );
-        }
+//Loads individual image as texture
+SDL_Texture* loadTexture( char *path );
 
-        //Close file handler
-        SDL_RWclose( file );
-    }
-    else
-    {
-        printf( "Error: Unable to save file! %s\n", SDL_GetError() );
-    }
-    	//Free global font
-	TTF_CloseFont( gFont );
-	gFont = NULL;
+bool loadFromFile(char *path);
 
-	//Destroy window
-	SDL_DestroyRenderer( gRenderer );
-	SDL_DestroyWindow( gWindow );
-	gWindow = NULL;
-	gRenderer = NULL;
+void free();
 
-	//Quit SDL subsystems
-	TTF_Quit();
-	IMG_Quit();
-	SDL_Quit();
-}
+void render(int x, int y);
+
+bool checkCollisionArray( SDL_Rect *a, SDL_Rect *b );
+
+void shiftColliders(struct dotStructArray *inputStruct);
+
+bool LTexture(struct textureStruct *inputStruct);
+
+bool loadFromRenderedText(struct ttfStruct *structinput, SDL_Color textColor );
+
+/************************************
+*
+*
+* Functions
+*
+*
+*************************************/
 
 bool init()
 {
@@ -777,30 +350,66 @@ bool init()
     return success;
 }
 
-bool loadMusic(struct musicStruct *inputStruct)
+void initDot(struct dotStruct *inputStruct)
 {
-    bool success = true;
-    inputStruct->gMusic = Mix_LoadMUS( inputStruct->musicPath );
-    if( inputStruct->gMusic == NULL )
-    {
-        printf( "Failed to load music! SDL_mixer Error: %s\n", Mix_GetError() );
-        success = false;
-    }
-    return success;
+    inputStruct->DOT_WIDTH = 20;
+    inputStruct->DOT_HEIGHT = 20;
+    inputStruct->DOT_VEL = 1;
+    inputStruct->mPosX = 0;
+    inputStruct->mPosY = 0;
+    inputStruct->mVelX = 0;
+    inputStruct->mVelY = 0;
+    inputStruct->mCollider.w = inputStruct->DOT_WIDTH;
+    inputStruct->mCollider.h = inputStruct->DOT_HEIGHT;
 }
 
-bool loadSound(struct soundStruct *inputStruct)
+void initDotArray(struct dotStructArray *inputStruct, int posX, int posY)
 {
-    bool success = true;
-    inputStruct->gSound = Mix_LoadWAV( inputStruct->musicPath );
-    if( inputStruct->gSound == NULL )
-    {
-        printf( "Failed to load music! SDL_mixer Error: %s\n", Mix_GetError() );
-        success = false;
-    }
-    return success;
-}
 
+    inputStruct->DOT_WIDTH = 20;
+    inputStruct->DOT_HEIGHT = 20;
+    inputStruct->DOT_VEL = 10;
+    inputStruct->mPosX = posX;
+    inputStruct->mPosY = posY;
+    inputStruct->mVelX = 0;
+    inputStruct->mVelY = 0;
+
+    inputStruct->mCollider[ 0 ].w = 6;
+    inputStruct->mCollider[ 0 ].h = 1;
+
+    inputStruct->mCollider[ 1 ].w = 10;
+    inputStruct->mCollider[ 1 ].h = 1;
+
+    inputStruct->mCollider[ 2 ].w = 14;
+    inputStruct->mCollider[ 2 ].h = 1;
+
+    inputStruct->mCollider[ 3 ].w = 16;
+    inputStruct->mCollider[ 3 ].h = 2;
+
+    inputStruct->mCollider[ 4 ].w = 18;
+    inputStruct->mCollider[ 4 ].h = 2;
+
+    inputStruct->mCollider[ 5 ].w = 20;
+    inputStruct->mCollider[ 5 ].h = 6;
+
+    inputStruct->mCollider[ 6 ].w = 18;
+    inputStruct->mCollider[ 6 ].h = 2;
+
+    inputStruct->mCollider[ 7 ].w = 16;
+    inputStruct->mCollider[ 7 ].h = 2;
+
+    inputStruct->mCollider[ 8 ].w = 14;
+    inputStruct->mCollider[ 8 ].h = 1;
+
+    inputStruct->mCollider[ 9 ].w = 10;
+    inputStruct->mCollider[ 9 ].h = 1;
+
+    inputStruct->mCollider[ 10 ].w = 6;
+    inputStruct->mCollider[ 10 ].h = 1;
+
+    inputStruct->mColliders.r = inputStruct->DOT_WIDTH / 2;
+    shiftColliders(inputStruct);
+}
 bool initRenderer()
 {
     //Initialization flag
@@ -917,6 +526,30 @@ bool initVsyncRenderer()
     return success;
 }
 
+bool loadMusic(struct musicStruct *inputStruct)
+{
+    bool success = true;
+    inputStruct->gMusic = Mix_LoadMUS( inputStruct->musicPath );
+    if( inputStruct->gMusic == NULL )
+    {
+        printf( "Failed to load music! SDL_mixer Error: %s\n", Mix_GetError() );
+        success = false;
+    }
+    return success;
+}
+
+bool loadSound(struct soundStruct *inputStruct)
+{
+    bool success = true;
+    inputStruct->gSound = Mix_LoadWAV( inputStruct->musicPath );
+    if( inputStruct->gSound == NULL )
+    {
+        printf( "Failed to load music! SDL_mixer Error: %s\n", Mix_GetError() );
+        success = false;
+    }
+    return success;
+}
+
 SDL_Surface* loadSurface( char *path )
 {
     //The final optimized image
@@ -1013,11 +646,46 @@ bool loadMediaTexture()
 
 bool loadMediaGeometry()
 {
+
     //Loading success flag
     bool success = true;
 
     //Nothing to load
     return success;
+}
+void closeRWopsWrapper(char *path)
+{
+    //Open data for writing
+    SDL_RWops* file = SDL_RWFromFile( path, "w+b" );
+    if( file != NULL )
+    {
+        //Save data
+        for( int i = 0; i < TOTAL_DATA; ++i )
+        {
+            SDL_RWwrite( file, &gData[ i ], sizeof(Sint32), 1 );
+        }
+
+        //Close file handler
+        SDL_RWclose( file );
+    }
+    else
+    {
+        printf( "Error: Unable to save file! %s\n", SDL_GetError() );
+    }
+    	//Free global font
+	TTF_CloseFont( gFont );
+	gFont = NULL;
+
+	//Destroy window
+	SDL_DestroyRenderer( gRenderer );
+	SDL_DestroyWindow( gWindow );
+	gWindow = NULL;
+	gRenderer = NULL;
+
+	//Quit SDL subsystems
+	TTF_Quit();
+	IMG_Quit();
+	SDL_Quit();
 }
 
 void close()
@@ -1060,6 +728,354 @@ void closeTexture()
     //Quit SDL subsystems
     IMG_Quit();
     SDL_Quit();
+}
+
+bool SDL_RWopsWrapper(char *path)
+{
+    bool success = false;
+    SDL_RWops* file = SDL_RWFromFile( path , "r+b" );
+    if( file == NULL )
+    {
+    printf( "Warning: Unable to open file! SDL Error: %s\n", SDL_GetError() );
+    //Create file for writing
+    file = SDL_RWFromFile( path , "w+b" );
+    if( file != NULL )
+        {
+            printf( "New file created!\n" );
+
+            //Initialize data
+            for( int i = 0; i < TOTAL_DATA; ++i )
+            {
+                gData[ i ] = 0;
+                SDL_RWwrite( file, &gData[ i ], sizeof(Sint32), 1 );
+            }
+
+            //Close file handler
+            SDL_RWclose( file );
+        }
+        else
+        {
+            printf( "Error: Unable to create file! SDL Error: %s\n", SDL_GetError() );
+            success = false;
+        }
+    }        //File exists
+else
+    {
+    //Load data
+    printf( "Reading file...!\n" );
+    for( int i = 0; i < TOTAL_DATA; ++i )
+    {
+        SDL_RWread( file, &gData[ i ], sizeof(Sint32), 1 );
+    }
+
+    //Close file handler
+    SDL_RWclose( file );
+    }
+    return success;
+}
+
+double distanceSquared( int x1, int y1, int x2, int y2 )
+{
+    int deltaX = x2 - x1;
+    int deltaY = y2 - y1;
+    return deltaX*deltaX + deltaY*deltaY;
+}
+
+void handleDotEvent(struct dotStruct *inputStruct, SDL_Event *e)
+{
+//If a key was pressed
+    if( e->type == SDL_KEYDOWN && e->key.repeat == 0 )
+    {
+        //Adjust the velocity
+        switch( e->key.keysym.sym )
+        {
+            case SDLK_UP: inputStruct->mVelY -= inputStruct->DOT_VEL; break;
+            case SDLK_DOWN: inputStruct->mVelY += inputStruct->DOT_VEL; break;
+            case SDLK_LEFT: inputStruct->mVelX -= inputStruct->DOT_VEL; break;
+            case SDLK_RIGHT: inputStruct->mVelX += inputStruct->DOT_VEL; break;
+        }
+    }
+    //If a key was released
+    else if( e->type == SDL_KEYUP && e->key.repeat == 0 )
+    {
+        //Adjust the velocity
+        switch( e->key.keysym.sym )
+        {
+            case SDLK_UP: inputStruct->mVelY += inputStruct->DOT_VEL; break;
+            case SDLK_DOWN: inputStruct->mVelY -= inputStruct->DOT_VEL; break;
+            case SDLK_LEFT: inputStruct->mVelX += inputStruct->DOT_VEL; break;
+            case SDLK_RIGHT: inputStruct->mVelX -= inputStruct->DOT_VEL; break;
+        }
+    }
+}
+
+void handleDotEventArray(struct dotStructArray *inputStruct, SDL_Event *e)
+{
+//If a key was pressed
+    if( e->type == SDL_KEYDOWN && e->key.repeat == 0 )
+    {
+        //Adjust the velocity
+        switch( e->key.keysym.sym )
+        {
+            case SDLK_UP: inputStruct->mVelY -= inputStruct->DOT_VEL; break;
+            case SDLK_DOWN: inputStruct->mVelY += inputStruct->DOT_VEL; break;
+            case SDLK_LEFT: inputStruct->mVelX -= inputStruct->DOT_VEL; break;
+            case SDLK_RIGHT: inputStruct->mVelX += inputStruct->DOT_VEL; break;
+        }
+    }
+    //If a key was released
+    else if( e->type == SDL_KEYUP && e->key.repeat == 0 )
+    {
+        //Adjust the velocity
+        switch( e->key.keysym.sym )
+        {
+            case SDLK_UP: inputStruct->mVelY += inputStruct->DOT_VEL; break;
+            case SDLK_DOWN: inputStruct->mVelY -= inputStruct->DOT_VEL; break;
+            case SDLK_LEFT: inputStruct->mVelX += inputStruct->DOT_VEL; break;
+            case SDLK_RIGHT: inputStruct->mVelX -= inputStruct->DOT_VEL; break;
+        }
+    }
+}
+
+void moveDot(struct dotStruct *inputStruct, SDL_Rect *wall)
+{
+    inputStruct->mPosX += inputStruct->mVelX;
+    inputStruct->mCollider.x = inputStruct->mPosX;
+    //If the dot went too far to the left or right
+    if( ( inputStruct->mPosX < 0 ) || ( inputStruct->mPosX + inputStruct->DOT_WIDTH > SCREEN_WIDTH ) || checkCollision(inputStruct->mCollider, *wall) )
+    {
+        //Move back
+        inputStruct->mPosX -= inputStruct->mVelX;
+        inputStruct->mCollider.x = inputStruct->mPosX;
+    }
+        //Move the dot up or down
+    inputStruct->mPosY += inputStruct->mVelY;
+    inputStruct->mCollider.y = inputStruct->mPosY;
+
+    //If the dot went too far up or down
+    if( ( inputStruct->mPosY < 0 ) || ( inputStruct->mPosY + inputStruct->DOT_HEIGHT > SCREEN_HEIGHT ) || checkCollision(inputStruct->mCollider, *wall) )
+    {
+        //Move back
+        inputStruct->mPosY -= inputStruct->mVelY;
+        inputStruct->mCollider.y = inputStruct->mPosY;
+    }
+}
+
+void moveDotArray(struct dotStructArray *inputStruct, SDL_Rect *wall)
+{
+    inputStruct->mPosX += inputStruct->mVelX;
+
+    shiftColliders(inputStruct);
+
+    //inputStruct->mCollider.x = inputStruct->mPosX;
+    //If the dot went too far to the left or right
+    if( ( inputStruct->mPosX < 0 ) || ( inputStruct->mPosX + inputStruct->DOT_WIDTH > SCREEN_WIDTH ) || checkCollisionArray(inputStruct->mCollider, wall) )
+    {
+        //Move back
+        inputStruct->mPosX -= inputStruct->mVelX;
+      //  inputStruct->mCollider.x = inputStruct->mPosX;
+        shiftColliders(inputStruct);
+    }
+        //Move the dot up or down
+    inputStruct->mPosY += inputStruct->mVelY;
+    //inputStruct->mCollider.y = inputStruct->mPosY;
+    shiftColliders(inputStruct);
+
+    //If the dot went too far up or down
+    if( ( inputStruct->mPosY < 0 ) || ( inputStruct->mPosY + inputStruct->DOT_HEIGHT > SCREEN_HEIGHT ) || checkCollisionArray(inputStruct->mCollider, wall) )
+    {
+        inputStruct->mPosY -= inputStruct->mVelY;
+        //inputStruct->mCollider.y = inputStruct->mPosY;
+        shiftColliders(inputStruct);
+    }
+
+}
+
+bool checkCircleCircleCollision( struct Circle *a, struct Circle *b )
+{
+    //Calculate total radius squared
+    int totalRadiusSquared = a->r + b->r;
+    totalRadiusSquared = totalRadiusSquared * totalRadiusSquared;
+
+    //If the distance between the centers of the circles is less than the sum of their radii
+    if( distanceSquared( a->x, a->y, b->x, b->y ) < ( totalRadiusSquared ) )
+    {
+        //The circles have collided
+        return true;
+    }
+
+    //If not
+    return false;
+}
+
+bool checkCollisionCircleRect( struct Circle *a, SDL_Rect *b )
+{
+    //Closest point on collision box
+    int cX, cY;
+
+    //Find closest x offset
+    if( a->x < b->x )
+    {
+        cX = b->x;
+    }
+    else if( a->x > b->x + b->w )
+    {
+        cX = b->x + b->w;
+    }
+    else
+    {
+        cX = a->x;
+    }
+       //Find closest y offset
+    if( a->y < b->y )
+    {
+        cY = b->y;
+    }
+    else if( a->y > b->y + b->h )
+    {
+        cY = b->y + b->h;
+    }
+    else
+    {
+        cY = a->y;
+    }
+
+    //If the closest point is inside the circle
+    if( distanceSquared( a->x, a->y, cX, cY ) < a->r * a->r )
+    {
+        //This box and the circle have collided
+        return true;
+    }
+
+    //If the shapes have not collided
+    return false;
+}
+
+void moveDotArraySquareCircle(struct dotStructArray *inputStruct, struct Circle *circle, SDL_Rect *wall)
+{
+    inputStruct->mPosX += inputStruct->mVelX;
+
+    shiftColliders(inputStruct);
+    //inputStruct->mCollider.x = inputStruct->mPosX;
+    //If the dot went too far to the left or right
+    if( ( inputStruct->mPosX - inputStruct->mColliders.r < 0 ) || ( inputStruct->mPosX + inputStruct->mColliders.r > SCREEN_WIDTH ) || checkCollisionCircleRect(&inputStruct->mColliders, wall) || checkCircleCircleCollision(&inputStruct->mColliders, circle) )
+    {
+        //Move back
+        inputStruct->mPosX -= inputStruct->mVelX;
+        shiftColliders(inputStruct);
+    }
+        //Move the dot up or down
+    inputStruct->mPosY += inputStruct->mVelY;
+
+    //inputStruct->mCollider.y = inputStruct->mPosY;
+    shiftColliders(inputStruct);
+
+    //If the dot went too far up or down
+    if( ( inputStruct->mPosY - inputStruct->mColliders.r < 0 ) || ( inputStruct->mPosY + inputStruct->mColliders.r > SCREEN_HEIGHT ) || checkCollisionCircleRect(&inputStruct->mColliders, wall) || checkCircleCircleCollision(&inputStruct->mColliders, circle)  )
+    {
+        inputStruct->mPosY -= inputStruct->mVelY;
+        //inputStruct->mCollider.y = inputStruct->mPosY;
+        shiftColliders(inputStruct);
+    }
+
+}
+
+void shiftColliders(struct dotStructArray *inputStruct)
+{
+    //int lengthOfArray = sizeof(*inputStruct->mCollider)/sizeof(inputStruct->mCollider[0]);
+    //The row offset
+	inputStruct->mColliders.x = inputStruct->mPosX;
+	inputStruct->mColliders.y = inputStruct->mPosY;
+}
+
+bool checkCollision( SDL_Rect a, SDL_Rect b )
+{
+    //The sides of the rectangles
+    int leftA, leftB;
+    int rightA, rightB;
+    int topA, topB;
+    int bottomA, bottomB;
+
+    //Calculate the sides of rect A
+    leftA = a.x;
+    rightA = a.x + a.w;
+    topA = a.y;
+    bottomA = a.y + a.h;
+
+    //Calculate the sides of rect B
+    leftB = b.x;
+    rightB = b.x + b.w;
+    topB = b.y;
+    bottomB = b.y + b.h;
+
+    //If any of the sides from A are outside of B
+    if( bottomA <= topB )
+    {
+        return false;
+    }
+
+    if( topA >= bottomB )
+    {
+        return false;
+    }
+
+    if( rightA <= leftB )
+    {
+        return false;
+    }
+
+    if( leftA >= rightB )
+    {
+        return false;
+    }
+
+    //If none of the sides from A are outside B
+    return true;
+}
+
+bool checkCollisionArray( SDL_Rect a[], SDL_Rect b[] )
+{
+    int lengthOfA;
+    int lengthOfB;
+    //The sides of the rectangles
+    int leftA, leftB;
+    int rightA, rightB;
+    int topA, topB;
+    int bottomA, bottomB;
+
+    lengthOfA = 11;
+    lengthOfB = 11;
+
+    for( int Abox = 0; Abox < lengthOfA; Abox++)
+    {
+        leftA = a[Abox].x;
+        rightA = a[Abox].x + a[Abox].w;
+        topA = a[Abox].y;
+        bottomA = a[Abox].y + a[Abox].h;
+        for( int Bbox = 0; Bbox < lengthOfB; Bbox++)
+        {
+            leftB = b[Bbox].x;
+            rightB = b[Bbox].x + b[Bbox].w;
+            topB = b[Bbox].y;
+            bottomB = b[Bbox].y + b[Bbox].h;
+
+            if( ( ( bottomA <= topB ) || ( topA >= bottomB ) || ( rightA <= leftB ) || ( leftA >= rightB ) ) == false )
+            {
+                //A collision is detected
+                return true;
+            }
+        }
+    }
+    //If neither set of collision boxes touched
+
+
+    return false;
+}
+
+void setPosition(struct buttonStruct *structInput, int x, int y)
+{
+    structInput->xPos = x;
+    structInput->yPos = y;
 }
 
 bool LTexture(struct textureStruct *structinput)
@@ -1417,9 +1433,6 @@ Uint32 getTicks(struct timerStruct *inputStruct)
 }
 
 
-
-
-
 int main( int argc, char* args[] )
 {
     SDL_Color highlightColor = { 0xFF, 0, 0, 0xFF };
@@ -1439,16 +1452,20 @@ int main( int argc, char* args[] )
     else
     {
         struct ttfStruct gTimeTexture;
-        struct timerStruct fpsTimer;
-        struct timerStruct capTimer;
         struct ttfStruct gfpsTexture;
         struct ttfStruct gInputTextTexture;
         struct ttfStruct gPromptTextTexture;
         struct ttfStruct gDataTextures[ TOTAL_DATA ];
 
+        struct textureStruct gSpriteSheetTexture;
+        struct textureStruct gBGTexture;
+
+        struct timerStruct fpsTimer;
+        struct timerStruct capTimer;
+
         struct dotStructArray gDotTextureArray;
         struct dotStructArray gDotTextureArray2;
-        struct textureStruct gBGTexture;
+
 
         SDL_Color textColor = { 0, 0, 0, 255 };
 
