@@ -94,6 +94,10 @@ int main()
 *
 *************************************/
 
+//Display data
+int gTotalDisplays = 0;
+SDL_Rect *gDisplayBounds = NULL;
+
 #define TOTAL_WINDOWS 3
 
 //The images that correspond to a keypress
@@ -262,6 +266,7 @@ struct LWindow
 {
     SDL_Renderer* mRenderer;
     int mWindowID;
+    int mWindowDisplayID;
     SDL_Window* mWindow;
     int mWidth;
     int mHeight;
@@ -368,8 +373,8 @@ bool initLWindow(struct LWindow *inputStruct)
 {
     inputStruct->mWindow = NULL;
     inputStruct->mRenderer = NULL;
-    inputStruct->mWidth = 0;
-    inputStruct->mHeight = 0;
+    inputStruct->mWidth = SCREEN_WIDTH;
+    inputStruct->mHeight = SCREEN_HEIGHT;
     inputStruct->mMouseFocus = false;
     inputStruct->mKeyboardFocus = false;
     inputStruct->mFullScreen = false;
@@ -526,6 +531,21 @@ bool initLWindowRenderer(struct LWindow *inputStruct)
     }
     else
     {
+        gTotalDisplays = SDL_GetNumVideoDisplays();
+        if( gTotalDisplays < 2 )
+        {
+            printf( "Warning: Only one display connected!" );
+        }
+
+        gDisplayBounds = malloc (gTotalDisplays * sizeof(SDL_Rect) );
+       // gDisplayBounds[gTotalDisplays] = NULL;
+
+        //Get bounds of each display
+        //gDisplayBounds1 = SDL_Rect[ gTotalDisplays ];
+        for( int i = 0; i < gTotalDisplays; ++i )
+        {
+            SDL_GetDisplayBounds( i, &gDisplayBounds[ i ] );
+        }
         inputStruct->mWindow = NULL;
         //Create window
         inputStruct->mWindow = SDL_CreateWindow( "SDL Tutorial", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN );
@@ -565,6 +585,7 @@ bool initLWindowRenderer(struct LWindow *inputStruct)
                     gScreenSurface = SDL_GetWindowSurface( inputStruct->mWindow );
                     //Grab window identifier
                     inputStruct->mWindowID = SDL_GetWindowID( inputStruct->mWindow );
+                    inputStruct->mWindowDisplayID = SDL_GetWindowDisplayIndex( inputStruct->mWindow );
                     //Flag as opened
                     inputStruct->mShown = true;
                 }
@@ -1462,12 +1483,18 @@ void handleEvent(struct buttonStruct *inputStruct, SDL_Event* e)
 
 void handleLWindowEvent(struct LWindow *inputStruct, SDL_Event* e)
 {
+    bool updateCaption = false;
     if( e->type == SDL_WINDOWEVENT && e->window.windowID == inputStruct->mWindowID)
     {
         //Caption update flag
-        bool updateCaption = false;
+
         switch( e->window.event )
 		{
+		    case SDL_WINDOWEVENT_MOVED:
+            inputStruct->mWindowDisplayID = SDL_GetWindowDisplayIndex( inputStruct->mWindow );
+            updateCaption = true;
+            break;
+
 			//Window appeared
 			case SDL_WINDOWEVENT_SHOWN:
 			inputStruct->mShown = true;
@@ -1534,22 +1561,63 @@ void handleLWindowEvent(struct LWindow *inputStruct, SDL_Event* e)
 			SDL_HideWindow( inputStruct->mWindow );
 			break;
 		}
+    }
+        else if( e->type == SDL_KEYDOWN )
+        {
+            //Display change flag
+            bool switchDisplay = false;
+
+            //Cycle through displays on up/down
+            switch( e->key.keysym.sym )
+            {
+                case SDLK_UP:
+                ++inputStruct->mWindowDisplayID;
+                switchDisplay = true;
+                break;
+
+                case SDLK_DOWN:
+                --inputStruct->mWindowDisplayID;
+                switchDisplay = true;
+                break;
+            }
+            //Display needs to be updated
+            if( switchDisplay )
+                {
+                    //Bound display index
+                    if( inputStruct->mWindowDisplayID < 0 )
+                    {
+                        inputStruct->mWindowDisplayID = gTotalDisplays - 1;
+                    }
+                    else if( inputStruct->mWindowDisplayID >= gTotalDisplays )
+                    {
+                        inputStruct->mWindowDisplayID = 0;
+                    }
+
+            //Move window to center of next display
+            SDL_SetWindowPosition( inputStruct->mWindow, gDisplayBounds[ inputStruct->mWindowDisplayID ].x + ( gDisplayBounds[ inputStruct->mWindowDisplayID ].w - inputStruct->mWidth ) / 2, gDisplayBounds[ inputStruct->mWindowDisplayID ].y + ( gDisplayBounds[ inputStruct->mWindowDisplayID ].h - inputStruct->mHeight ) / 2 );
+            updateCaption = true;
+                }
+        }
         //Update window caption with new data
         if( updateCaption )
         {
             char textBuffer1[100];
             char textBuffer2[100];
+            char textBuffer3[100];
             strcpy(textBuffer1, "SDL Tutorial - ID: ");
             sprintf(textBuffer2, "%d", inputStruct->mWindowID );
             strcat(textBuffer1, textBuffer2);
+            strcat(textBuffer1, "Display: ");
+            sprintf(textBuffer3, "%d", inputStruct->mWindowDisplayID );
+            strcat(textBuffer1, textBuffer3);
             strcat(textBuffer1, " MouseFocus:");
             strcat(textBuffer1, ( inputStruct->mMouseFocus ) ? "On" : "Off" );
             strcat(textBuffer1, " KeyboardFocus:");
             strcat(textBuffer1, ( inputStruct->mKeyboardFocus ) ? "On" : "Off" );
             SDL_SetWindowTitle( inputStruct->mWindow, textBuffer1 );
         }
-    }
-}
+
+   }
 
 void focus(struct LWindow *inputStruct)
 {
@@ -1683,6 +1751,8 @@ int main( int argc, char* args[] )
     SDL_Event e;
     double degrees = 0;
     SDL_RendererFlip flipType = SDL_FLIP_NONE;
+    int gTotalDisplays = 0;
+    SDL_Rect* gDisplayBounds = NULL;
  //   SDL_RWopsWrapper("33_file_reading_and_writing/nums.bin");
     //Start up SDL and create window
    /* if( !initRenderer() )
@@ -1690,15 +1760,14 @@ int main( int argc, char* args[] )
         printf( "Failed to initialize!\n" );
     }
     */
-    struct LWindow gWindows[ TOTAL_WINDOWS ];
-    for(int i = 0; i < TOTAL_WINDOWS; i++)
-    {
-        initLWindow(&gWindows[i]);
-        if( !initLWindowRenderer(&gWindows[i]) )
+    struct LWindow gWindow;
+    initLWindow(&gWindow);
+
+        if( !initLWindowRenderer(&gWindow) )
         {
             printf( "Failed to initialize!\n" );
         }
-    }
+
         struct ttfStruct gTimeTexture;
         struct ttfStruct gfpsTexture;
         struct ttfStruct gInputTextTexture;
@@ -1838,64 +1907,23 @@ int main( int argc, char* args[] )
         //While application is running
      //   SDL_StartTextInput();
         while( !quit )
-        {
-            timerStart(&capTimer);
-        //    bool renderText = false;
-            //Handle events on queue
-            while( SDL_PollEvent( &e ) != 0 )
-            {
-                //User requests quit
-                if( e.type == SDL_QUIT )
-                {
-                    quit = true;
-                }
-                for(int i = 0; i < TOTAL_WINDOWS; i++)
-                {
-                    handleLWindowEvent( &gWindows[i], &e );
-                }
-                //Pull up window
-				if( e.type == SDL_KEYDOWN )
+		{
+			//Handle events on queue
+			while( SDL_PollEvent( &e ) != 0 )
+			{
+				//User requests quit
+				if( e.type == SDL_QUIT )
 				{
-					switch( e.key.keysym.sym )
-					{
-						case SDLK_1:
-						focus(&gWindows[ 0 ]);
-						break;
-
-						case SDLK_2:
-						focus(&gWindows[ 1 ]);
-						break;
-
-						case SDLK_3:
-						focus(&gWindows[ 2 ]);
-						break;
-					}
+					quit = true;
 				}
-            }
 
-                for(int i = 0; i < TOTAL_WINDOWS; i++)
-                {
-                    SDL_SetRenderDrawColor( gWindows[i].mRenderer, 0xFF, 0xFF, 0xFF, 0xFF );
-                    SDL_RenderClear( gWindows[i].mRenderer );
-                    renderLWindow(&gWindows[i]);
-                }
+				//Handle window events
+				handleLWindowEvent(&gWindow ,&e);
+			}
 
-               //Check all windows
-                bool allWindowsClosed = true;
-                for( int i = 0; i < TOTAL_WINDOWS; ++i )
-                {
-                    if( gWindows[ i ].mShown )
-                    {
-                        allWindowsClosed = false;
-                        break;
-                    }
-                }
-
-                //Application closed all windows
-                if( allWindowsClosed )
-                {
-                    quit = true;
-                }
+			//Update window
+			renderLWindow(&gWindow);
+		}
 
 
                 float avgFPS = countedFrames / ( getTicks(&fpsTimer) / 1000.f );
@@ -1939,7 +1967,7 @@ int main( int argc, char* args[] )
                 strcpy(timeText, "FPS: ");
                 sprintf(timeBuffer, "%.0f", avgFPS  );
                 strcat(timeText, timeBuffer);
-        }
+
                 /*
 
                 //Clear screen
@@ -2004,7 +2032,7 @@ int main( int argc, char* args[] )
         closeTexture();
         close();
         gTexture = gDotTextureArray2.mTexture;*/
-        closeTexture();
+      //  closeTexture();
         close();
 
 
