@@ -257,6 +257,17 @@ struct dotStructArray
     struct Circle mColliders;
 };
 
+struct LWindow
+{
+
+    SDL_Window* mWindow;
+    int mWidth;
+    int mHeight;
+    bool mMouseFocus;
+    bool mKeyboardFocus;
+    bool mFullScreen;
+    bool mMinimized;
+};
 /************************************
 *
 *
@@ -350,6 +361,29 @@ bool init()
     return success;
 }
 
+bool initLWindow(struct LWindow *inputStruct)
+{
+    inputStruct->mWindow = NULL;
+    inputStruct->mWidth = 0;
+    inputStruct->mHeight = 0;
+    inputStruct->mMouseFocus = false;
+    inputStruct->mKeyboardFocus = false;
+    inputStruct->mFullScreen = false;
+    inputStruct->mMinimized = false;
+  /*  inputStruct->mWindow = SDL_CreateWindow( "SDL Tutorial", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE );
+    if( inputStruct->mWindow != NULL )
+    {
+        inputStruct->mMouseFocus = true;
+        inputStruct->mKeyboardFocus = true;
+        inputStruct->mWidth = SCREEN_WIDTH;
+        inputStruct->mHeight = SCREEN_HEIGHT;
+    }
+
+    return inputStruct->mWindow != NULL;
+    */
+    return inputStruct->mWindow == NULL;
+}
+
 void initDot(struct dotStruct *inputStruct)
 {
     inputStruct->DOT_WIDTH = 20;
@@ -434,6 +468,75 @@ bool initRenderer()
         {
             //Create renderer for window
             gRenderer = SDL_CreateRenderer( gWindow, -1, SDL_RENDERER_ACCELERATED);
+            if( gRenderer == NULL )
+            {
+                printf( "Renderer could not be created! SDL Error: %s\n", SDL_GetError() );
+                success = false;
+            }
+            else
+            {
+                //Initialize renderer color
+                SDL_SetRenderDrawColor( gRenderer, 0xFF, 0xFF, 0xFF, 0xFF );
+
+                //Initialize PNG loading
+                int imgFlags = IMG_INIT_PNG;
+                if( !( IMG_Init( imgFlags ) & imgFlags ) )
+                {
+                    printf( "SDL_image could not initialize! SDL_image Error: %s\n", IMG_GetError() );
+                    success = false;
+                }
+                else
+                {
+                    //Get window surface
+                    gScreenSurface = SDL_GetWindowSurface( gWindow );
+                }
+            }
+        }
+    }
+                     //Initialize SDL_ttf
+                if( TTF_Init() == -1 )
+                {
+                    printf( "SDL_ttf could not initialize! SDL_ttf Error: %s\n", TTF_GetError() );
+                    success = false;
+                }
+                        //Initialize SDL_mixer
+        if( Mix_OpenAudio( 44100, MIX_DEFAULT_FORMAT, 2, 2048 ) < 0 )
+        {
+            printf( "SDL_mixer could not initialize! SDL_mixer Error: %s\n", Mix_GetError() );
+            success = false;
+        }
+    return success;
+}
+
+bool initLWindowRenderer(struct LWindow *inputStruct)
+{
+    //Initialization flag
+    bool success = true;
+
+    //Initialize SDL
+    if( SDL_Init( SDL_INIT_VIDEO | SDL_INIT_AUDIO ) < 0 )
+    {
+        printf( "SDL could not initialize! SDL_Error: %s\n", SDL_GetError() );
+        success = false;
+    }
+    else
+    {
+        inputStruct->mWindow = NULL;
+        //Create window
+        inputStruct->mWindow = SDL_CreateWindow( "SDL Tutorial", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN );
+        if( inputStruct->mWindow == NULL )
+        {
+            printf( "Window could not be created! SDL_Error: %s\n", SDL_GetError() );
+            success = false;
+        }
+        else
+        {
+            inputStruct->mMouseFocus = true;
+            inputStruct->mKeyboardFocus = true;
+            inputStruct->mWidth = SCREEN_WIDTH;
+            inputStruct->mHeight = SCREEN_HEIGHT;
+            //Create renderer for window
+            gRenderer = SDL_CreateRenderer( inputStruct->mWindow, -1, SDL_RENDERER_ACCELERATED);
             if( gRenderer == NULL )
             {
                 printf( "Renderer could not be created! SDL Error: %s\n", SDL_GetError() );
@@ -1348,6 +1451,95 @@ void handleEvent(struct buttonStruct *inputStruct, SDL_Event* e)
     }
 }
 
+void handleLWindowEvent(struct LWindow *inputStruct, SDL_Event* e)
+{
+    if( e->type == SDL_WINDOWEVENT )
+    {
+        //Caption update flag
+        bool updateCaption = false;
+        switch( e->window.event )
+        {
+            //Get new dimensions and repaint on window size change
+            case SDL_WINDOWEVENT_SIZE_CHANGED:
+            inputStruct->mWidth = e->window.data1;
+            inputStruct->mHeight = e->window.data2;
+            SDL_RenderPresent( gRenderer );
+            break;
+
+            //Repaint on exposure
+            case SDL_WINDOWEVENT_EXPOSED:
+            SDL_RenderPresent( gRenderer );
+            break;
+
+            //Mouse entered window
+            case SDL_WINDOWEVENT_ENTER:
+            inputStruct->mMouseFocus = true;
+            updateCaption = true;
+            break;
+
+            //Mouse left window
+            case SDL_WINDOWEVENT_LEAVE:
+            inputStruct->mMouseFocus = false;
+            updateCaption = true;
+            break;
+
+            //Window has keyboard focus
+            case SDL_WINDOWEVENT_FOCUS_GAINED:
+            inputStruct->mKeyboardFocus = true;
+            updateCaption = true;
+            break;
+
+            //Window lost keyboard focus
+            case SDL_WINDOWEVENT_FOCUS_LOST:
+            inputStruct->mKeyboardFocus = false;
+            updateCaption = true;
+            break;
+
+             //Window minimized
+            case SDL_WINDOWEVENT_MINIMIZED:
+            inputStruct->mMinimized = true;
+            break;
+
+            //Window maxized
+            case SDL_WINDOWEVENT_MAXIMIZED:
+            inputStruct->mMinimized = false;
+            break;
+
+            //Window restored
+            case SDL_WINDOWEVENT_RESTORED:
+            inputStruct->mMinimized = false;
+            break;
+        }
+        //Update window caption with new data
+        if( updateCaption )
+        {
+            char textBuffer1[100];
+            strcpy(textBuffer1, "SDL Tutorial - MouseFocus:");
+            strcat(textBuffer1, ( inputStruct->mMouseFocus ) ? "On" : "Off" );
+            strcat(textBuffer1, " KeyboardFocus:");
+            strcat(textBuffer1, ( inputStruct->mKeyboardFocus ) ? "On" : "Off" );
+            SDL_SetWindowTitle( inputStruct->mWindow, textBuffer1 );
+        }
+    }
+        //Enter exit full screen on return key
+    else if( e->type == SDL_KEYDOWN && e->key.keysym.sym == SDLK_RETURN )
+    {
+        if( inputStruct->mFullScreen )
+        {
+            SDL_SetWindowFullscreen( inputStruct->mWindow, SDL_FALSE );
+            inputStruct->mFullScreen = false;
+        }
+        else
+        {
+            SDL_SetWindowFullscreen( inputStruct->mWindow, SDL_TRUE );
+            inputStruct->mFullScreen = true;
+            inputStruct->mMinimized = false;
+        }
+    }
+}
+
+
+
 void timerInit(struct timerStruct *inputStruct)
 {
     inputStruct->mStarted = false;
@@ -1436,16 +1628,22 @@ Uint32 getTicks(struct timerStruct *inputStruct)
 int main( int argc, char* args[] )
 {
     SDL_Color highlightColor = { 0xFF, 0, 0, 0xFF };
-
     //Current input point
     int currentData = 0;
     bool quit = false;
     SDL_Event e;
     double degrees = 0;
     SDL_RendererFlip flipType = SDL_FLIP_NONE;
-    SDL_RWopsWrapper("33_file_reading_and_writing/nums.bin");
+ //   SDL_RWopsWrapper("33_file_reading_and_writing/nums.bin");
     //Start up SDL and create window
-    if( !initRenderer() )
+   /* if( !initRenderer() )
+    {
+        printf( "Failed to initialize!\n" );
+    }
+    */
+    struct LWindow gWindow;
+    initLWindow(&gWindow);
+    if( !initLWindowRenderer(&gWindow) )
     {
         printf( "Failed to initialize!\n" );
     }
@@ -1459,12 +1657,15 @@ int main( int argc, char* args[] )
 
         struct textureStruct gSpriteSheetTexture;
         struct textureStruct gBGTexture;
+        struct textureStruct gSceneTexture;
 
         struct timerStruct fpsTimer;
         struct timerStruct capTimer;
 
         struct dotStructArray gDotTextureArray;
         struct dotStructArray gDotTextureArray2;
+
+
 
 
         SDL_Color textColor = { 0, 0, 0, 255 };
@@ -1498,13 +1699,20 @@ int main( int argc, char* args[] )
         gPromptTextTexture.xPos = 0;
         gPromptTextTexture.yPos = 0;
         gPromptTextTexture.textureText = "Whatup";
+        gSceneTexture.xPos = 0;
+        gSceneTexture.yPos = 0;
 
+        gSceneTexture.imagePath = "35_window_events/window.png";
 
         gTimeTexture.imagePath = "22_timing/lazy.ttf";
         gTimeTexture.textureText = "LMAO";
         gInputTextTexture.imagePath = "22_timing/lazy.ttf";
         gInputTextTexture.textureText = inputText;
         if( !loadMedia(&gfpsTexture, textColor) )
+        {
+            printf( "Failed to load media! \n" );
+        }
+        if( !LTexture(&gSceneTexture) )
         {
             printf( "Failed to load media! \n" );
         }
@@ -1585,64 +1793,20 @@ int main( int argc, char* args[] )
                 {
                     quit = true;
                 }
-                 else if( e.type == SDL_KEYDOWN )
-					{
-						switch( e.key.keysym.sym )
-						{
-						    char textBuffer[100] = "";
-							//Previous data entry
-							case SDLK_UP:
-							//Rerender previous entry input point
-							sprintf(textBuffer, "%u", gData[ currentData ]  );
-							gDataTextures[ currentData ].textureText = textBuffer;
-							loadMedia(&gDataTextures[ currentData ], textColor);
-							--currentData;
-							if( currentData < 0 )
-							{
-								currentData = TOTAL_DATA - 1;
-							}
+                   //Handle window events
+                    handleLWindowEvent( &gWindow, &e );
+                }
+                //Only draw when not minimized
+                if( !gWindow.mMinimized )
+                {
 
-							//Rerender current entry input point
-							sprintf(textBuffer, "%u", gData[ currentData ]  );
-							gDataTextures[ currentData ].textureText = textBuffer;
-							loadMedia(&gDataTextures[ currentData ], highlightColor);
-							break;
+                    //Clear screen
+                    SDL_SetRenderDrawColor( gRenderer, 0xFF, 0xFF, 0xFF, 0xFF );
+                    SDL_RenderClear( gRenderer );
 
-							//Next data entry
-							case SDLK_DOWN:
-							//Rerender previous entry input point
-							sprintf(textBuffer, "%u", gData[ currentData ]  );
-							gDataTextures[ currentData ].textureText = textBuffer;
-							loadMedia(&gDataTextures[ currentData ], textColor);
-							++currentData;
-							if( currentData == TOTAL_DATA )
-							{
-								currentData = 0;
-							}
-
-							//Rerender current entry input point
-							sprintf(textBuffer, "%u", gData[ currentData ]  );
-							gDataTextures[ currentData ].textureText = textBuffer;
-							loadMedia(&gDataTextures[ currentData ], highlightColor);
-							break;
-
-							//Decrement input point
-							case SDLK_LEFT:
-							--gData[ currentData ];
-							sprintf(textBuffer, "%u", gData[ currentData ]  );
-							gDataTextures[ currentData ].textureText = textBuffer;
-							loadMedia(&gDataTextures[ currentData ], highlightColor);
-							break;
-
-							//Increment input point
-							case SDLK_RIGHT:
-							++gData[ currentData ];
-							sprintf(textBuffer, "%u", gData[ currentData ]  );
-							gDataTextures[ currentData ].textureText = textBuffer;
-							loadMedia(&gDataTextures[ currentData ], highlightColor);
-							break;
-						}
-					}
+                    textureRender(&gSceneTexture, NULL, degrees, NULL, flipType, (gWindow.mWidth - gSceneTexture.mWidth) / 2, (gWindow.mHeight - gSceneTexture.mHeight ) / 2);
+                    //Update screen
+                    SDL_RenderPresent( gRenderer );
                 }
 
                 float avgFPS = countedFrames / ( getTicks(&fpsTimer) / 1000.f );
@@ -1686,6 +1850,8 @@ int main( int argc, char* args[] )
                 strcpy(timeText, "FPS: ");
                 sprintf(timeBuffer, "%.0f", avgFPS  );
                 strcat(timeText, timeBuffer);
+        }
+                /*
 
                 //Clear screen
                 SDL_SetRenderDrawColor( gRenderer, 0xFF, 0xFF, 0xFF, 0xFF );
@@ -1705,6 +1871,9 @@ int main( int argc, char* args[] )
             //    textureRender(&gBGTexture, NULL, degrees, NULL, flipType, scrollingOffset, 0);
             //    textureRender(&gBGTexture, NULL, degrees, NULL, flipType, scrollingOffset + gBGTexture.mWidth, 0);
              //   textureDotRenderArray(&gDotTextureArray, NULL, degrees, NULL, flipType, 0, 0);
+
+
+              /*
                 textureRenderttf(&gfpsTexture, NULL, degrees, NULL, flipType);
 
                 gPromptTextTexture.xPos = (SCREEN_WIDTH - gPromptTextTexture.mWidth) / 2;
@@ -1718,13 +1887,13 @@ int main( int argc, char* args[] )
                     textureRenderttf(&gDataTextures[i], NULL, degrees, NULL, flipType);
                 }
 
-
+            */
 
 
              /*   gInputTextTexture.xPos = (SCREEN_WIDTH - gInputTextTexture.mWidth) / 2;
                 gInputTextTexture.yPos = gPromptTextTexture.mHeight;
                 textureRenderttf(&gInputTextTexture, NULL, degrees, NULL, flipType);
-                */
+
                // textureDotRenderArray(&gDotTextureArray2, NULL, degrees, NULL, flipType, -gDotTextureArray2.mColliders.r, -gDotTextureArray2.mColliders.r);
 
 
@@ -1737,8 +1906,11 @@ int main( int argc, char* args[] )
                     SDL_Delay( SCREEN_TICKS_PER_FRAME - frameTicks );
                 }
             }
-        closeRWopsWrapper("33_file_reading_and_writing/nums.bin");
-        SDL_StopTextInput();
+
+            */
+
+     //   closeRWopsWrapper("33_file_reading_and_writing/nums.bin");
+   //     SDL_StopTextInput();
         gTexture = gDotTextureArray.mTexture;
         closeTexture();
         close();
