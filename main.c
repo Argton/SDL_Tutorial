@@ -100,6 +100,8 @@ SDL_Rect *gDisplayBounds = NULL;
 
 #define TOTAL_WINDOWS 3
 
+#define TOTAL_PARTICLES 20
+
 //The images that correspond to a keypress
 SDL_Surface* gKeyPressSurfaces[ KEY_PRESS_SURFACE_TOTAL ];
 
@@ -222,6 +224,14 @@ struct buttonStruct
     int mCurrentSprite;
 };
 
+struct particleStruct
+{
+    int mPosX;
+    int mPosY;
+    int mFrame;
+    SDL_Texture* mTexture;
+};
+
 struct dotStruct
 {
     int DOT_WIDTH;
@@ -235,6 +245,7 @@ struct dotStruct
     SDL_Texture* mTexture;
     SDL_Color textColor;
     SDL_Rect mCollider;
+    struct particleStruct *particle[TOTAL_PARTICLES];
 };
 
 struct Circle
@@ -316,6 +327,11 @@ bool LTexture(struct textureStruct *inputStruct);
 
 bool loadFromRenderedText(struct ttfStruct *structinput, SDL_Color textColor );
 
+struct textureStruct gDotTexture;
+struct textureStruct gRedTexture;
+struct textureStruct gGreenTexture;
+struct textureStruct gBlueTexture;
+struct textureStruct gShimmerTexture;
 /************************************
 *
 *
@@ -405,6 +421,19 @@ void initDot(struct dotStruct *inputStruct)
     inputStruct->mVelY = 0;
     inputStruct->mCollider.w = inputStruct->DOT_WIDTH;
     inputStruct->mCollider.h = inputStruct->DOT_HEIGHT;
+}
+
+void initParticle(struct particleStruct *inputStruct, int x, int y)
+{
+    inputStruct->mPosX = x - 5 + ( rand() ) % 25;
+    inputStruct->mPosY = y - 5 + ( rand() ) % 25;
+    inputStruct->mFrame = rand() % 5;
+    switch( rand() % 3 )
+    {
+        case 0: inputStruct->mTexture = &gRedTexture; break;
+        case 1: inputStruct->mTexture = &gGreenTexture; break;
+        case 2: inputStruct->mTexture = &gBlueTexture; break;
+    }
 }
 
 void initDotArray(struct dotStructArray *inputStruct, int posX, int posY)
@@ -1205,10 +1234,15 @@ bool checkCollisionArray( SDL_Rect a[], SDL_Rect b[] )
     return false;
 }
 
-void setPosition(struct buttonStruct *structInput, int x, int y)
+void setPosition(struct buttonStruct *inputStruct, int x, int y)
 {
-    structInput->xPos = x;
-    structInput->yPos = y;
+    inputStruct->xPos = x;
+    inputStruct->yPos = y;
+}
+
+void renderParticle(struct particleStruct *inputStruct)
+{
+    textureRender(&inputStruct->mTexture);
 }
 
 bool LTexture(struct textureStruct *structinput)
